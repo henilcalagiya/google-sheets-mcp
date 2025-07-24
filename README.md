@@ -55,10 +55,7 @@ python -m gsheet_mcp_server
 ### Basic Tools
 - **`list_spreadsheets`** - List all accessible Google Sheets with structured output
 - **`list_sheets_in_spreadsheet`** - List all sheets in a specific spreadsheet
-- **`read_sheet`** - Read data from a specific sheet
-- **`write_sheet`** - Write data to a specific sheet  
-- **`create_spreadsheet`** - Create a new spreadsheet
-- **`search_sheets`** - Search for content within spreadsheets
+- **`add_sheets_to_spreadsheet`** - Add new sheets to an existing spreadsheet
 
 
 
@@ -79,7 +76,7 @@ python -m gsheet_mcp_server
 The server returns structured data using Pydantic models:
 
 ```python
-# SpreadsheetInfo model
+# SpreadsheetInfo model (for list_spreadsheets)
 {
     "id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
     "name": "Sample Spreadsheet",
@@ -88,16 +85,7 @@ The server returns structured data using Pydantic models:
     "url": "https://docs.google.com/spreadsheets/d/..."
 }
 
-# SearchResult model
-{
-    "spreadsheet": "Sample Spreadsheet",
-    "spreadsheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-    "sheet": "Sheet1",
-    "cell": "A1",
-    "value": "Sample Data"
-}
-
-# SheetInfo model
+# SheetInfo model (for list_sheets_in_spreadsheet)
 {
     "sheet_id": 0,
     "title": "Sheet1",
