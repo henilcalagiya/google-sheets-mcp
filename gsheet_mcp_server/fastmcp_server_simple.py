@@ -11,25 +11,9 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
-
-
-class SpreadsheetInfo(BaseModel):
-    """Spreadsheet information structure."""
-
-    id: str = Field(description="Spreadsheet ID")
-    name: str = Field(description="Spreadsheet name")
-    created_time: str = Field(description="Creation time")
-    modified_time: str = Field(description="Last modified time")
-    url: str = Field(description="Spreadsheet URL")
-
-
-class SheetInfo(BaseModel):
-    """Sheet information structure."""
-
-    sheet_id: int = Field(description="Sheet ID")
-    title: str = Field(description="Sheet title")
-    index: int = Field(description="Sheet index")
-    grid_properties: Dict[str, Any] = Field(description="Grid properties (rows, columns)")
+from .handler.all_spreadsheet_management_handler import all_spreadsheet_management_handler
+from .handler.sheets_management_handler import sheets_management_handler
+from .models import SpreadsheetInfo, SheetInfo
 
 
 # Create an MCP server
@@ -68,223 +52,56 @@ else:
     drive_service = None
 
 
+# Remove the list_spreadsheets tool function (from @mcp.tool() def list_spreadsheets ... to its end)
+
+
 @mcp.tool()
-def list_spreadsheets(max_results: int = 10) -> List[SpreadsheetInfo]:
-    """List all accessible Google Sheets."""
+def all_spreadsheet_management_tool(
+    spreadsheet_id: str = "",
+    new_title: str = "",
+    max_results: int = 10
+) -> Dict[str, Any]:
+    """Combined tool: List all spreadsheets and optionally rename a spreadsheet by ID.
+    - If spreadsheet_id and new_title are provided, renames the spreadsheet.
+    - Always returns the list of spreadsheets after any operation.
+    """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    try:
-        # Search for Google Sheets files
-        results = (
-            drive_service.files()
-            .list(
-                q="mimeType='application/vnd.google-apps.spreadsheet'",
-                pageSize=max_results,
-                fields="files(id,name,createdTime,modifiedTime,webViewLink)",
-            )
-            .execute()
-        )
-        
-        files = results.get("files", [])
-        if not files:
-            return []
-        
-        # Convert to structured output
-        spreadsheet_infos = []
-        for file in files:
-            spreadsheet_infos.append(
-                SpreadsheetInfo(
-                    id=file["id"],
-                    name=file["name"],
-                    created_time=file["createdTime"],
-                    modified_time=file["modifiedTime"],
-                    url=file.get("webViewLink", ""),
-                )
-            )
-        return spreadsheet_infos
-        
-    except HttpError as error:
-        raise RuntimeError(f"Error listing spreadsheets: {error}")
-
-
-@mcp.tool()
-def list_sheets_in_spreadsheet(spreadsheet_id: str) -> List[SheetInfo]:
-    """List all sheets in a specific Google Spreadsheet."""
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    try:
-        # Get spreadsheet metadata
-        spreadsheet = sheets_service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id,
-            fields="sheets.properties"
-        ).execute()
-        
-        sheets = spreadsheet.get("sheets", [])
-        if not sheets:
-            return []
-        
-        sheet_infos = []
-        for sheet in sheets:
-            props = sheet["properties"]
-            sheet_infos.append(
-                SheetInfo(
-                    sheet_id=props["sheetId"],
-                    title=props["title"],
-                    index=props["index"],
-                    grid_properties={
-                        "rowCount": props.get("gridProperties", {}).get("rowCount", 0),
-                        "columnCount": props.get("gridProperties", {}).get("columnCount", 0)
-                    }
-                )
-            )
-        
-        return sheet_infos
-        
-    except HttpError as error:
-        raise RuntimeError(f"Error listing sheets: {error}")
+    return all_spreadsheet_management_handler(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_id=spreadsheet_id,
+        new_title=new_title,
+        max_results=max_results
+    )
 
 
 @mcp.tool()
-def modify_sheets_in_spreadsheet(
+def sheets_management_tool(
     spreadsheet_id: str,
     add_sheet_names: Optional[List[str]] = None,
-    delete_sheet_ids: Optional[List[int]] = None
+    delete_sheet_ids: Optional[List[int]] = None,
+    rename_sheets: Optional[Dict[int, str]] = None
 ) -> Dict[str, Any]:
-    """Add and/or delete sheets in a Google Spreadsheet.
-    - add_sheet_names: list of sheet names to add (optional)
-    - delete_sheet_ids: list of sheet IDs to delete (optional)
-    Returns a dict with keys: 'added', 'deleted', 'message'.
+    """Manage sheets in a Google Spreadsheet: list, create (add), delete, and/or rename sheets.
+    - If none of add_sheet_names, delete_sheet_ids, or rename_sheets is provided, lists all sheets.
+    - add_sheet_names: list of sheet names to create/add as new sheets (optional) or must pass empty list
+    - delete_sheet_ids: list of sheet IDs to delete (optional) or must pass empty list
+    - rename_sheets: To rename sheets, pass a dict mapping sheet IDs to new titles; otherwise, pass an empty dict.
+    Returns a dict with keys: 'sheets' (list of SheetInfo), 'added', 'deleted', 'renamed', 'message'.
     """
+
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not add_sheet_names and not delete_sheet_ids:
-        raise ValueError("At least one of add_sheet_names or delete_sheet_ids must be provided.")
-    added_sheets = []
-    deleted_ids = []
-    requests = []
-    # Prepare add requests
-    if add_sheet_names:
-        for sheet_name in add_sheet_names:
-            requests.append({
-                "addSheet": {
-                    "properties": {
-                        "title": sheet_name
-                    }
-                }
-            })
-    # Prepare delete requests
-    if delete_sheet_ids:
-        for sheet_id in delete_sheet_ids:
-            requests.append({
-                "deleteSheet": {
-                    "sheetId": sheet_id
-                }
-            })
-            deleted_ids.append(sheet_id)
-    try:
-        if requests:
-            body = {"requests": requests}
-            sheets_service.spreadsheets().batchUpdate(
-                spreadsheetId=spreadsheet_id,
-                body=body
-            ).execute()
-        # If sheets were added, get their info
-        if add_sheet_names:
-            updated_spreadsheet = sheets_service.spreadsheets().get(
-                spreadsheetId=spreadsheet_id,
-                fields="sheets.properties"
-            ).execute()
-            for sheet in updated_spreadsheet.get("sheets", []):
-                props = sheet["properties"]
-                if props["title"] in add_sheet_names:
-                    added_sheets.append(
-                        SheetInfo(
-                            sheet_id=props["sheetId"],
-                            title=props["title"],
-                            index=props["index"],
-                            grid_properties={
-                                "rowCount": props.get("gridProperties", {}).get("rowCount", 0),
-                                "columnCount": props.get("gridProperties", {}).get("columnCount", 0)
-                            }
-                        )
-                    )
-        msg = []
-        if added_sheets:
-            msg.append(f"Added {len(added_sheets)} sheet(s)")
-        if deleted_ids:
-            msg.append(f"Deleted {len(deleted_ids)} sheet(s)")
-        if not msg:
-            msg.append("No changes made.")
-        return {
-            "added": [s.dict() for s in added_sheets],
-            "deleted": deleted_ids,
-            "message": ", ".join(msg)
-        }
-    except HttpError as error:
-        raise RuntimeError(f"Error modifying sheets: {error}")
-
-
-# Add a dynamic greeting resource
-@mcp.resource("greeting://{name}")
-def get_greeting(name: str) -> str:
-    """Get a personalized greeting."""
-    return f"Hello, {name}! Welcome to Google Sheets MCP Server."
-
-
-# Add a spreadsheet info resource
-@mcp.resource("spreadsheet://{spreadsheet_id}")
-def get_spreadsheet_info(spreadsheet_id: str) -> str:
-    """Get information about a specific spreadsheet."""
-    if not sheets_service:
-        return "Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH."
-    
-    try:
-        result = (
-            sheets_service.spreadsheets()
-            .get(spreadsheetId=spreadsheet_id)
-            .execute()
-        )
-        
-        title = result.get("properties", {}).get("title", "Unknown")
-        sheets_count = len(result.get("sheets", []))
-        
-        return f"Spreadsheet: {title}\nSheets: {sheets_count}\nID: {spreadsheet_id}"
-        
-    except HttpError as error:
-        return f"Error getting spreadsheet info: {error}"
-
-
-# Add prompts
-@mcp.prompt()
-def analyze_spreadsheet(spreadsheet_id: str, analysis_type: str = "summary") -> str:
-    """Generate prompts for analyzing spreadsheet data."""
-    return f"""Analyze the spreadsheet with ID {spreadsheet_id}.
-
-Analysis type: {analysis_type}
-
-Please provide insights about:
-- Data structure and organization
-- Key metrics and trends
-- Potential improvements
-- Data quality issues
-
-Use the available tools to gather information about this spreadsheet."""
-
-
-@mcp.prompt()
-def create_report(spreadsheet_id: str, report_type: str = "basic") -> str:
-    """Generate prompts for creating reports."""
-    return f"""Create a {report_type} report for spreadsheet {spreadsheet_id}.
-
-Please include:
-- Executive summary
-- Key findings
-- Data visualizations (if applicable)
-- Recommendations
-
-Use the available tools to access the spreadsheet data."""
+    return sheets_management_handler(
+        sheets_service=sheets_service,
+        spreadsheet_id=spreadsheet_id,
+        add_sheet_names=add_sheet_names,
+        delete_sheet_ids=delete_sheet_ids,
+        rename_sheets_map=rename_sheets
+    )
 
 
 if __name__ == "__main__":
