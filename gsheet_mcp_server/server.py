@@ -31,6 +31,7 @@ from .handler.resize_columns_handler import resize_columns_data
 from .handler.format_cells_handler import format_cells_data
 from .handler.conditional_format_handler import conditional_format_data
 from .handler.merge_cells_handler import merge_cells_data
+from .handler.create_data_table_handler import create_data_table
 from .handler.read_sheet_data_handler import read_multiple_ranges
 
 
@@ -75,8 +76,8 @@ else:
 
 @mcp.tool()
 def spreadsheet_management_tool(
-    spreadsheet_id: str = "",
-    new_title: str = "",
+        spreadsheet_id: str = "",
+        new_title: str = "",
     max_results: int = 10
 ) -> Dict[str, Any]:
     """Combined tool: List all spreadsheets and optionally rename a spreadsheet by ID.
@@ -100,7 +101,7 @@ def spreadsheet_management_tool(
 
 @mcp.tool()
 def sheet_management_tool(
-    spreadsheet_id: str = Field(..., description="Required: The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="Required: The name of the Google Spreadsheet"),
     add_sheet_names: Optional[List[str]] = Field(default_factory=list, description="Optional: List of sheet names to add as new sheets. Pass an empty list if not adding."),
     delete_sheet_ids: Optional[List[int]] = Field(default_factory=list, description="Optional: List of sheet IDs to delete. Pass an empty list if not deleting."),
     include_metadata: bool = Field(default=True, description="Optional: Whether to include detailed metadata. Set to False for faster response with basic info only."),
@@ -130,8 +131,9 @@ def sheet_management_tool(
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     return sheet_management_handler(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         add_sheet_names=add_sheet_names,
         delete_sheet_ids=delete_sheet_ids,
         include_metadata=include_metadata,
@@ -140,21 +142,22 @@ def sheet_management_tool(
 
 @mcp.tool()
 def rename_sheets_tool(
-    spreadsheet_id: str = Field(..., description="must pass the spreadsheet id, not name"),
+    spreadsheet_name: str = Field(..., description="must pass the spreadsheet name"),
     sheet_ids: List[int] = Field(..., description="Required: List of sheet IDs to rename"),
     new_titles: List[str] = Field(..., description="Required: List of new titles for the sheets")
 ) -> Dict[str, Any]:
     """
     Rename sheets in a Google Spreadsheet.
-    - spreadsheet_id: must pass the spreadsheet id, not name
+    - spreadsheet_name: must pass the spreadsheet name
     - sheet_ids: list of sheet IDs to rename
     - new_titles: list of new titles for the sheets
     """
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     return rename_sheets_handler(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         sheet_ids=sheet_ids,
         new_titles=new_titles
     )
@@ -163,7 +166,7 @@ def rename_sheets_tool(
 
 @mcp.tool()
 def read_sheet_data_tool(
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet"),
     ranges: List[str] = Field(..., description="List of range strings (e.g., ['Sheet1!A1:B10', 'Sheet2!A:A'])"),
     value_render_option: str = Field(default="FORMATTED_VALUE", description="How to render values: FORMATTED_VALUE, UNFORMATTED_VALUE, or FORMULA"),
     date_time_render_option: str = Field(default="FORMATTED_STRING", description="How to render dates: SERIAL_NUMBER or FORMATTED_STRING")
@@ -181,8 +184,9 @@ def read_sheet_data_tool(
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     return read_multiple_ranges(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         ranges=ranges,
         value_render_option=value_render_option,
         date_time_render_option=date_time_render_option
@@ -191,7 +195,7 @@ def read_sheet_data_tool(
 
 @mcp.tool()
 def write_cell(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     cell: str = Field(..., description="Cell reference (e.g., 'Sheet1!A1', 'Sheet2!B5')"),
     value: str = Field(..., description="Value to write to the cell")
 ) -> Dict[str, Any]:
@@ -207,8 +211,9 @@ def write_cell(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return write_cell_data(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         cell=cell,
         value=value
     )
@@ -216,7 +221,7 @@ def write_cell(
 
 @mcp.tool()
 def write_row(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     row_range: str = Field(..., description="Row range (e.g., 'Sheet1!A1:E1', 'Sheet1!1:1')"),
     values: List[str] = Field(..., description="List of values to write to the row")
 ) -> Dict[str, Any]:
@@ -231,8 +236,9 @@ def write_row(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return write_row_data(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         row_range=row_range,
         values=values
     )
@@ -240,7 +246,7 @@ def write_row(
 
 @mcp.tool()
 def write_grid(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     grid_range: str = Field(..., description="Grid range (e.g., 'Sheet1!A1:C5', 'Sheet1!A1:Z100')"),
     values: List[List[str]] = Field(..., description="2D array of values to write to the grid")
 ) -> Dict[str, Any]:
@@ -255,8 +261,9 @@ def write_grid(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return write_grid_data(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         grid_range=grid_range,
         values=values
     )
@@ -264,7 +271,7 @@ def write_grid(
 
 @mcp.tool()
 def append_data(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     column_range: str = Field(..., description="Column range to append to (e.g., 'Sheet1!A:A', 'Sheet1!B:B')"),
     values: List[str] = Field(..., description="List of values to append to the column")
 ) -> Dict[str, Any]:
@@ -279,8 +286,9 @@ def append_data(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return append_data_to_column(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         column_range=column_range,
         values=values
     )
@@ -288,7 +296,7 @@ def append_data(
 
 @mcp.tool()
 def clear_range(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     range_to_clear: str = Field(..., description="Range to clear (e.g., 'Sheet1!A1:B10', 'Sheet1!A:A')")
 ) -> Dict[str, Any]:
     """
@@ -303,15 +311,16 @@ def clear_range(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return clear_range_data(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         range=range_to_clear
     )
 
 
 @mcp.tool()
 def find_replace(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     search_range: str = Field(..., description="Range to search in (e.g., 'Sheet1!A:A', 'Sheet1!A1:Z100')"),
     find_text: str = Field(..., description="Text to find"),
     replace_text: str = Field(..., description="Text to replace with"),
@@ -328,8 +337,9 @@ def find_replace(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return find_replace_text(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         search_range=search_range,
         find_text=find_text,
         replace_text=replace_text
@@ -338,7 +348,7 @@ def find_replace(
 
 @mcp.tool()
 def insert_rows(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
     start_index: int = Field(..., description="Starting row index (0-based)"),
     end_index: int = Field(..., description="Ending row index (0-based, exclusive)")
@@ -355,8 +365,9 @@ def insert_rows(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return insert_rows_data(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         sheet_id=sheet_id,
         start_index=start_index,
         end_index=end_index
@@ -365,7 +376,7 @@ def insert_rows(
 
 @mcp.tool()
 def delete_rows(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
     row_indices: List[int] = Field(..., description="List of row indices to delete (0-based)")
 ) -> Dict[str, Any]:
@@ -381,8 +392,9 @@ def delete_rows(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return delete_rows_data(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         sheet_id=sheet_id,
         row_indices=row_indices
     )
@@ -390,7 +402,7 @@ def delete_rows(
 
 @mcp.tool()
 def insert_columns(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
     start_index: int = Field(..., description="Starting column index (0-based)"),
     end_index: int = Field(..., description="Ending column index (0-based, exclusive)")
@@ -407,8 +419,9 @@ def insert_columns(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return insert_columns_data(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         sheet_id=sheet_id,
         start_index=start_index,
         end_index=end_index
@@ -417,7 +430,7 @@ def insert_columns(
 
 @mcp.tool()
 def delete_columns(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
     column_indices: List[int] = Field(..., description="List of column indices to delete (0-based)")
 ) -> Dict[str, Any]:
@@ -433,8 +446,9 @@ def delete_columns(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return delete_columns_data(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         sheet_id=sheet_id,
         column_indices=column_indices
     )
@@ -442,7 +456,7 @@ def delete_columns(
 
 @mcp.tool()
 def move_rows(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
     source_start_index: int = Field(..., description="Starting row index to move (0-based)"),
     source_end_index: int = Field(..., description="Ending row index to move (0-based, exclusive)"),
@@ -460,8 +474,9 @@ def move_rows(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return move_rows_data(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         sheet_id=sheet_id,
         source_start_index=source_start_index,
         source_end_index=source_end_index,
@@ -471,7 +486,7 @@ def move_rows(
 
 @mcp.tool()
 def resize_columns(
-    spreadsheet_id: str = Field(..., description="The ID of the Google Spreadsheet"),
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
     column_indices: List[int] = Field(..., description="List of column indices to resize (0-based)"),
     widths: List[int] = Field(..., description="List of widths in pixels for each column")
@@ -488,11 +503,52 @@ def resize_columns(
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     return resize_columns_data(
+        drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         sheet_id=sheet_id,
         column_indices=column_indices,
         widths=widths
+    )
+
+
+@mcp.tool()
+def create_data_table_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="Name of the sheet to create table in"),
+    headers: List[str] = Field(..., description="List of header strings for the table"),
+    data: List[List[str]] = Field(..., description="2D list of data rows (each row is a list of values)"),
+    table_style: str = Field(default="default", description="Table style: 'default', 'striped', or 'bordered'")
+) -> Dict[str, Any]:
+    """
+    Create a formatted data table in Google Sheets with professional styling.
+    
+    Features:
+    - Writes headers and data to the specified sheet
+    - Auto-resizes columns to fit content
+    - Formats header row with bold text and dark background
+    - Adds borders around the entire table
+    - Center-aligns all data cells
+    - Optional striped rows for better readability
+    
+    Examples:
+    - Basic table: headers=['Name', 'Email', 'Phone'], data=[['John', 'john@email.com', '123-456-7890'], ['Jane', 'jane@email.com', '098-765-4321']]
+    - Striped table: table_style='striped' for alternating row colors
+    - Large dataset: data=[[...]] with many rows of data
+    
+    Returns table information including range, dimensions, and styling applied.
+    """
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    return create_data_table(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        sheet_name=sheet_name,
+        headers=headers,
+        data=data,
+        table_style=table_style
     )
 
 

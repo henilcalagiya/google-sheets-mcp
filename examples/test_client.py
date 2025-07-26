@@ -17,7 +17,7 @@ async def test_gsheet_server():
     # Set up the server parameters
     server_params = StdioServerParameters(
         command="uv",
-        args=["run", "python", "-m", "gsheet_mcp_server.fastmcp_server_simple"],
+        args=["run", "python", "-m", "gsheet_mcp_server.server"],
         env={
             "GOOGLE_CREDENTIALS_PATH": os.getenv("GOOGLE_CREDENTIALS_PATH", "")
         }

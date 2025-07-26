@@ -1,10 +1,11 @@
 from typing import Any, Dict
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class WriteCellRequest(BaseModel):
     """Request model for writing a single cell."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     cell: str = Field(..., description="Cell reference (e.g., 'Sheet1!A1')")
     value: Any = Field(..., description="Value to write to the cell")
 
@@ -16,8 +17,9 @@ class WriteCellResponse(BaseModel):
     message: str
 
 def write_cell_data(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     cell: str,
     value: Any
 ) -> Dict[str, Any]:
@@ -26,14 +28,14 @@ def write_cell_data(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         cell: Cell reference (e.g., 'Sheet1!A1')
         value: Value to write to the cell
     
     Returns:
         Dict containing write operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         # Convert single value to 2D array format expected by API
         values = [[value]]

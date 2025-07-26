@@ -1,10 +1,11 @@
 from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class ResizeColumnsRequest(BaseModel):
     """Request model for resizing columns."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)")
     column_indices: List[int] = Field(..., description="List of column indices to resize (0-based)")
     widths: List[int] = Field(..., description="List of widths in pixels for each column")
@@ -19,8 +20,9 @@ class ResizeColumnsResponse(BaseModel):
     message: str
 
 def resize_columns_data(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     sheet_id: int,
     column_indices: List[int],
     widths: List[int]
@@ -30,7 +32,7 @@ def resize_columns_data(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         sheet_id: ID of the sheet (0-based)
         column_indices: List of column indices to resize (0-based)
         widths: List of widths in pixels for each column
@@ -38,7 +40,7 @@ def resize_columns_data(
     Returns:
         Dict containing resize operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         # Validate that column_indices and widths have the same length
         if len(column_indices) != len(widths):

@@ -438,7 +438,7 @@ def handler_function(
 
 ## Integration with Main Server
 
-The main server file (`fastmcp_server_simple.py`) now imports and uses these handlers:
+The main server file (`server.py`) now imports and uses these handlers:
 
 ```python
 # Import individual handlers

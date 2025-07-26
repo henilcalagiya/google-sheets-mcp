@@ -1,10 +1,11 @@
 from typing import List, Any, Dict
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class AppendDataRequest(BaseModel):
     """Request model for appending data to a column."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     column_range: str = Field(..., description="Column range (e.g., 'Sheet1!A:A')")
     values: List[Any] = Field(..., description="List of values to append to the column")
 
@@ -18,8 +19,9 @@ class AppendDataResponse(BaseModel):
     message: str
 
 def append_data_to_column(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     column_range: str,
     values: List[Any]
 ) -> Dict[str, Any]:
@@ -28,14 +30,14 @@ def append_data_to_column(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         column_range: Column range (e.g., 'Sheet1!A:A')
         values: List of values to append to the column
     
     Returns:
         Dict containing append operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         # Convert list of values to 2D array format expected by API
         # Each value becomes a row with one column

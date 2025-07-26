@@ -2,10 +2,12 @@ from typing import List, Dict, Any, Optional
 from .api_functions import add_sheets, delete_sheets, list_sheets
 from .read_sheet_data_handler import get_sheet_metadata
 from gsheet_mcp_server.models import SheetInfo
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 def sheet_management_handler(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     add_sheet_names: Optional[List[str]] = None,
     delete_sheet_ids: Optional[List[int]] = None,
     include_metadata: bool = True,
@@ -16,7 +18,7 @@ def sheet_management_handler(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         add_sheet_names: List of sheet names to add (optional)
         delete_sheet_ids: List of sheet IDs to delete (optional)
         include_metadata: Whether to include detailed metadata
@@ -25,6 +27,8 @@ def sheet_management_handler(
     Returns:
         Dict containing sheet management results and metadata
     """
+    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     
     # Perform sheet operations
     added_sheets = []

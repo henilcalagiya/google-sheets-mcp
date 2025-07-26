@@ -1,10 +1,11 @@
 from typing import List, Any, Dict
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class WriteGridRequest(BaseModel):
     """Request model for writing a grid of data."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     grid_range: str = Field(..., description="Grid range (e.g., 'Sheet1!A1:C10')")
     values: List[List[Any]] = Field(..., description="2D array of values to write to the grid")
 
@@ -18,8 +19,9 @@ class WriteGridResponse(BaseModel):
     message: str
 
 def write_grid_data(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     grid_range: str,
     values: List[List[Any]]
 ) -> Dict[str, Any]:
@@ -28,14 +30,14 @@ def write_grid_data(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         grid_range: Grid range (e.g., 'Sheet1!A1:C10')
         values: 2D array of values to write to the grid
     
     Returns:
         Dict containing write operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         result = sheets_service.spreadsheets().values().update(
             spreadsheetId=spreadsheet_id,

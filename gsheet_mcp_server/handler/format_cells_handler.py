@@ -1,10 +1,11 @@
 from typing import Dict, Any, List, Optional
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class FormatCellsRequest(BaseModel):
     """Request model for formatting cells."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)")
     start_row_index: int = Field(..., description="Starting row index (0-based)")
     end_row_index: int = Field(..., description="Ending row index (0-based, exclusive)")
@@ -29,8 +30,9 @@ class FormatCellsResponse(BaseModel):
     message: str
 
 def format_cells_data(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     sheet_id: int,
     start_row_index: int,
     end_row_index: int,
@@ -72,7 +74,7 @@ def format_cells_data(
     Returns:
         Dict containing format operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         # Prepare the cell format
         cell_format = {}

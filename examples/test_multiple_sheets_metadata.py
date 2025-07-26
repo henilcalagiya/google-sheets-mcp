@@ -7,7 +7,7 @@ This demonstrates the new functionality to get metadata for multiple specific sh
 import os
 import json
 from gsheet_mcp_server.handler.sheet_management_handler import sheet_management_handler
-from gsheet_mcp_server.fastmcp_server_simple import _setup_google_services
+from gsheet_mcp_server.server import _setup_google_services
 
 def test_multiple_sheets_metadata():
     """Test the enhanced sheets management tool with multiple target sheets."""

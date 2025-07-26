@@ -1,10 +1,11 @@
 from typing import Dict, Any
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class FindReplaceRequest(BaseModel):
     """Request model for find and replace operation."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     search_range: str = Field(..., description="Range to search in (e.g., 'Sheet1!A1:Z100')")
     find_text: str = Field(..., description="Text to find")
     replace_text: str = Field(..., description="Text to replace with")
@@ -19,8 +20,9 @@ class FindReplaceResponse(BaseModel):
     message: str
 
 def find_replace_text(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     search_range: str,
     find_text: str,
     replace_text: str
@@ -30,7 +32,7 @@ def find_replace_text(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         search_range: Range to search in (e.g., 'Sheet1!A1:Z100')
         find_text: Text to find
         replace_text: Text to replace with
@@ -38,7 +40,7 @@ def find_replace_text(
     Returns:
         Dict containing find and replace operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         # First, read the data from the range
         result = sheets_service.spreadsheets().values().get(

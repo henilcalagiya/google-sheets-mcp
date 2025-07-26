@@ -7,7 +7,7 @@ This demonstrates the three reading options: column-wise, row-wise, and custom r
 import os
 import json
 from gsheet_mcp_server.handler.read_sheet_data_handler import read_sheet_data, read_multiple_ranges, get_sheet_metadata
-from gsheet_mcp_server.fastmcp_server_simple import _setup_google_services
+from gsheet_mcp_server.server import _setup_google_services
 
 def test_reading_functions():
     """Test the three reading options with a sample spreadsheet."""

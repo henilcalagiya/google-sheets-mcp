@@ -1,10 +1,11 @@
 from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class DeleteRowsRequest(BaseModel):
     """Request model for deleting rows."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)")
     row_indices: List[int] = Field(..., description="List of row indices to delete (0-based)")
 
@@ -17,8 +18,9 @@ class DeleteRowsResponse(BaseModel):
     message: str
 
 def delete_rows_data(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     sheet_id: int,
     row_indices: List[int]
 ) -> Dict[str, Any]:
@@ -27,14 +29,14 @@ def delete_rows_data(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         sheet_id: ID of the sheet (0-based)
         row_indices: List of row indices to delete (0-based)
     
     Returns:
         Dict containing delete operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         # Sort indices in descending order to avoid shifting issues
         sorted_indices = sorted(row_indices, reverse=True)

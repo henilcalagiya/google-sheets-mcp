@@ -1,10 +1,11 @@
 from typing import Dict, Any
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class MergeCellsRequest(BaseModel):
     """Request model for merging cells."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)")
     start_row_index: int = Field(..., description="Starting row index (0-based)")
     end_row_index: int = Field(..., description="Ending row index (0-based, exclusive)")
@@ -21,8 +22,9 @@ class MergeCellsResponse(BaseModel):
     message: str
 
 def merge_cells_data(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     sheet_id: int,
     start_row_index: int,
     end_row_index: int,
@@ -35,7 +37,7 @@ def merge_cells_data(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         sheet_id: ID of the sheet (0-based)
         start_row_index: Starting row index (0-based)
         end_row_index: Ending row index (0-based, exclusive)
@@ -46,7 +48,7 @@ def merge_cells_data(
     Returns:
         Dict containing merge operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         # Validate merge type
         valid_merge_types = ["MERGE_ALL", "MERGE_COLUMNS", "MERGE_ROWS"]

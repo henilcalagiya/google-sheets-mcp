@@ -1,10 +1,11 @@
 from typing import Dict, Any
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class InsertRowsRequest(BaseModel):
     """Request model for inserting rows."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     sheet_id: int = Field(..., description="The ID of the sheet (0-based)")
     start_index: int = Field(..., description="Starting row index (0-based)")
     end_index: int = Field(..., description="Ending row index (0-based, exclusive)")
@@ -19,8 +20,9 @@ class InsertRowsResponse(BaseModel):
     message: str
 
 def insert_rows_data(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     sheet_id: int,
     start_index: int,
     end_index: int
@@ -30,7 +32,7 @@ def insert_rows_data(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         sheet_id: ID of the sheet (0-based)
         start_index: Starting row index (0-based)
         end_index: Ending row index (0-based, exclusive)
@@ -38,7 +40,7 @@ def insert_rows_data(
     Returns:
         Dict containing insert operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         # Calculate number of rows to insert
         num_rows = end_index - start_index

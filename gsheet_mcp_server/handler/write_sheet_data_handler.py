@@ -1,10 +1,11 @@
 from typing import List, Dict, Any, Optional, Union
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class WriteSheetRequest(BaseModel):
     """Request model for writing sheet data."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     ranges: List[str] = Field(..., description="List of ranges to update")
     values: List[List[List[Any]]] = Field(..., description="List of 2D arrays of values, one for each range")
 
@@ -27,8 +28,9 @@ class BatchUpdateResponse(BaseModel):
 
 
 def write_sheet_data_with_ranges_and_values(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     ranges: List[str],
     values: List[List[List[Any]]]
 ) -> Dict[str, Any]:
@@ -37,14 +39,14 @@ def write_sheet_data_with_ranges_and_values(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         ranges: List of range strings (e.g., ['Sheet1!A1', 'Sheet1!B1'])
         values: List of 2D arrays of values, one for each range
     
     Returns:
         Dict containing results for all write operations
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     # Validate that ranges and values have the same length
     if len(ranges) != len(values):
         raise ValueError(f"Number of ranges ({len(ranges)}) must match number of values arrays ({len(values)})")
@@ -64,8 +66,9 @@ def write_sheet_data_with_ranges_and_values(
     )
 
 def write_multiple_ranges(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     data: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """
@@ -73,13 +76,13 @@ def write_multiple_ranges(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         data: List of dicts with 'range' and 'values' keys
     
     Returns:
         Dict containing results for all write operations
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         # Prepare the batch update request
         data_body = []
@@ -130,8 +133,9 @@ def write_multiple_ranges(
 
 
 def clear_sheet_data(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     range: str
 ) -> Dict[str, Any]:
     """
@@ -139,13 +143,13 @@ def clear_sheet_data(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         range: Range to clear (e.g., 'Sheet1!A1:B10')
     
     Returns:
         Dict containing clear operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         result = sheets_service.spreadsheets().values().clear(
             spreadsheetId=spreadsheet_id,
@@ -170,8 +174,9 @@ def clear_sheet_data(
 
 
 def append_sheet_data(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     range: str,
     values: List[List[Any]],
     insert_data_option: str = "INSERT_ROWS"
@@ -181,7 +186,7 @@ def append_sheet_data(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         range: Range to append to (e.g., 'Sheet1!A:A')
         values: 2D array of values to append
         insert_data_option: How to handle data insertion
@@ -189,7 +194,7 @@ def append_sheet_data(
     Returns:
         Dict containing append operation results
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         result = sheets_service.spreadsheets().values().append(
             spreadsheetId=spreadsheet_id,

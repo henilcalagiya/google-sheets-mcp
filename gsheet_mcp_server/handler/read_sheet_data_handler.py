@@ -1,10 +1,11 @@
 from typing import List, Dict, Any, Optional, Union
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 
 class ReadSheetRequest(BaseModel):
     """Request model for reading sheet data."""
-    spreadsheet_id: str = Field(..., description="The ID of the spreadsheet")
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     sheet_name: str = Field(..., description="Name of the sheet to read")
     read_type: str = Field(..., description="Type of reading: 'column', 'row', or 'custom'")
     range_spec: str = Field(..., description="Range specification based on read_type")
@@ -24,8 +25,9 @@ class ReadSheetResponse(BaseModel):
 
 
 def read_multiple_ranges(
+    drive_service,
     sheets_service,
-    spreadsheet_id: str,
+    spreadsheet_name: str,
     ranges: List[str],
     value_render_option: str = "FORMATTED_VALUE",
     date_time_render_option: str = "FORMATTED_STRING"
@@ -35,7 +37,7 @@ def read_multiple_ranges(
     
     Args:
         sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
+        spreadsheet_name: Name of the spreadsheet
         ranges: List of range strings (e.g., ['Sheet1!A1:B10', 'Sheet2!A:A'])
         value_render_option: How to render values
         date_time_render_option: How to render dates
@@ -43,7 +45,7 @@ def read_multiple_ranges(
     Returns:
         Dict containing data for all requested ranges
     """
-    
+    spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         result = sheets_service.spreadsheets().values().batchGet(
             spreadsheetId=spreadsheet_id,
