@@ -16,8 +16,8 @@ from mcp.client.stdio import stdio_client
 async def simple_test():
     """Simple test of the manage_spreadsheet tool."""
     server_params = StdioServerParameters(
-        command="/Users/henil/GSheetMCP Python/venv/bin/python3",
-        args=["-m", "gsheet_mcp_server.fastmcp_server"],
+        command="uv",
+        args=["run", "python", "-m", "gsheet_mcp_server.fastmcp_server_simple"],
         cwd="/Users/henil/GSheetMCP Python",
         env={
             "GOOGLE_CREDENTIALS_PATH": "/Users/henil/GSheetMCP Python/glossy-chimera-466301-c1-a4ae73111b11.json"

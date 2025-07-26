@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Any
 from .api_functions import list_spreadsheets, rename_spreadsheet
 
-def all_spreadsheet_management_handler(
+def spreadsheet_management_handler(
     drive_service,
     sheets_service,
     spreadsheet_id: str = "",

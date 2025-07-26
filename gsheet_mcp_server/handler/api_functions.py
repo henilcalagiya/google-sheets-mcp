@@ -19,12 +19,12 @@ def list_spreadsheets(drive_service, max_results: int = 10) -> List[Dict[str, An
         for file in files:
             spreadsheet_infos.append(
                 SpreadsheetInfo(
-                    id=file["id"],
+                    spreadsheet_id=file["id"],
                     name=file["name"],
                     created_time=file["createdTime"],
                     modified_time=file["modifiedTime"],
                     url=file.get("webViewLink", ""),
-                ).dict()
+                ).model_dump()
             )
         return spreadsheet_infos
     except HttpError as error:
@@ -80,25 +80,7 @@ def delete_sheets(sheets_service, spreadsheet_id: str, sheet_ids: List[int]) -> 
         raise RuntimeError(f"Error deleting sheets: {error}")
     return sheet_ids
 
-def rename_sheets(sheets_service, spreadsheet_id: str, rename_map: Dict[int, str]) -> List[Dict[str, Any]]:
-    requests = [
-        {
-            "updateSheetProperties": {
-                "properties": {"sheetId": sheet_id, "title": new_title},
-                "fields": "title"
-            }
-        } for sheet_id, new_title in rename_map.items()
-    ]
-    if not requests:
-        return []
-    try:
-        sheets_service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body={"requests": requests}
-        ).execute()
-    except HttpError as error:
-        raise RuntimeError(f"Error renaming sheets: {error}")
-    return [{"sheet_id": sid, "new_title": t} for sid, t in rename_map.items()]
+
 
 def list_sheets(sheets_service, spreadsheet_id: str) -> List[SheetInfo]:
     try:
@@ -122,3 +104,20 @@ def list_sheets(sheets_service, spreadsheet_id: str) -> List[SheetInfo]:
         ]
     except HttpError as error:
         raise RuntimeError(f"Error listing sheets: {error}")
+
+def rename_sheets(sheets_service, spreadsheet_id: str, sheet_ids: List[int], new_titles: List[str]) -> List[str]:
+    requests = [
+        {"updateSheetProperties": {"properties": {"sheetId": sheet_id, "title": new_title}, "fields": "title"}}
+        for sheet_id, new_title in zip(sheet_ids, new_titles)
+    ]
+    if not requests:
+        return []
+    try:
+        sheets_service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={"requests": requests}
+        ).execute()
+    except HttpError as error:
+        raise RuntimeError(f"Error renaming sheets: {error}")
+    return [f"Sheet {sheet_id} renamed to '{new_title}'" for sheet_id, new_title in zip(sheet_ids, new_titles)]
+

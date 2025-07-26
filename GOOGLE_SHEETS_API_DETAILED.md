@@ -97,7 +97,7 @@ PATCH /v4/spreadsheets/{spreadsheetId}/sheets/{sheetId}
 ### **Phase 1 Models:**
 ```python
 # Existing
-SpreadsheetInfo = {id, name, created_time, modified_time, url}
+SpreadsheetInfo = {spreadsheet_id, name, created_time, modified_time, url}
 SheetInfo = {sheet_id, title, index, grid_properties}
 SearchResult = {spreadsheet, spreadsheet_id, sheet, cell, value}
 
