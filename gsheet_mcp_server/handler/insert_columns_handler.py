@@ -12,11 +12,11 @@ class InsertColumnsRequest(BaseModel):
 
 class InsertColumnsResponse(BaseModel):
     """Response model for inserting columns."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     sheet_id: int
     start_index: int
     end_index: int
-    inserted_columns: int
+    columns_inserted: int
     message: str
 
 def insert_columns_data(
@@ -64,12 +64,12 @@ def insert_columns_data(
         ).execute()
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
             "start_index": start_index,
             "end_index": end_index,
-            "inserted_columns": num_columns,
-            "message": f"Successfully inserted {num_columns} columns starting at index {start_index}"
+            "columns_inserted": end_index - start_index,
+            "message": f"Successfully inserted {end_index - start_index} columns starting at index {start_index}"
         }
         
     except HttpError as error:

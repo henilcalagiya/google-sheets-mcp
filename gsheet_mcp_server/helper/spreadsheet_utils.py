@@ -2,7 +2,6 @@
 
 from typing import Optional
 from googleapiclient.errors import HttpError
-from ..handler.api_functions import list_spreadsheets
 
 
 def get_spreadsheet_id_by_name(
@@ -11,7 +10,7 @@ def get_spreadsheet_id_by_name(
     exact_match: bool = True
 ) -> Optional[str]:
     """
-    Convert a spreadsheet name to its ID using the existing list_spreadsheets function.
+    Convert a spreadsheet name to its ID by making direct API call to Google Drive.
     
     Args:
         drive_service: Google Drive API service instance
@@ -28,23 +27,35 @@ def get_spreadsheet_id_by_name(
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
     try:
-        # Use the existing list_spreadsheets function
-        spreadsheets = list_spreadsheets(drive_service, max_results=100)
+        # Make direct API call to Google Drive
+        results = (
+            drive_service.files()
+            .list(
+                q="mimeType='application/vnd.google-apps.spreadsheet'",
+                pageSize=100,
+                fields="files(id,name)",
+            )
+            .execute()
+        )
+        files = results.get("files", [])
         
         # Search through the results
-        for spreadsheet in spreadsheets:
-            current_name = spreadsheet["name"]
+        for file in files:
+            current_name = file["name"]
             
             if exact_match:
                 if current_name == spreadsheet_name:
-                    return spreadsheet["spreadsheet_id"]
+                    return file["id"]
             else:
                 if spreadsheet_name.lower() in current_name.lower():
-                    return spreadsheet["spreadsheet_id"]
+                    return file["id"]
         
         # No match found
         return None
         
+    except HttpError as error:
+        print(f"Error searching for spreadsheet '{spreadsheet_name}': {error}")
+        return None
     except Exception as error:
         print(f"Unexpected error while searching for spreadsheet '{spreadsheet_name}': {error}")
         return None 

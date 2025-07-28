@@ -14,7 +14,7 @@ class ReadSheetRequest(BaseModel):
 
 class ReadSheetResponse(BaseModel):
     """Response model for reading sheet data."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     sheet_name: str
     range: str
     values: List[List[str]]
@@ -71,7 +71,7 @@ def read_multiple_ranges(
             })
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "ranges": results,
             "total_ranges": len(results),
             "message": f"Successfully read {len(results)} ranges"

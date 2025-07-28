@@ -76,12 +76,12 @@ else:
 
 @mcp.tool()
 def spreadsheet_management_tool(
-        spreadsheet_id: str = "",
-        new_title: str = "",
-    max_results: int = 10
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet"),
+    new_title: str = Field(..., description="The new title of the spreadsheet"),
+    max_results: int = Field(default=10, description="The maximum number of spreadsheets to return")
 ) -> Dict[str, Any]:
-    """Combined tool: List all spreadsheets and optionally rename a spreadsheet by ID.
-    - If spreadsheet_id and new_title are provided, renames the spreadsheet.
+    """Combined tool: List all spreadsheets and optionally rename a spreadsheet by name.
+    - If spreadsheet_name and new_title are provided, renames the spreadsheet.
     - Always returns the list of spreadsheets after any operation.
     """
     if not drive_service:
@@ -91,7 +91,7 @@ def spreadsheet_management_tool(
     return spreadsheet_management_handler(
         drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_id=spreadsheet_id,
+        spreadsheet_name=spreadsheet_name,
         new_title=new_title,
         max_results=max_results
     )

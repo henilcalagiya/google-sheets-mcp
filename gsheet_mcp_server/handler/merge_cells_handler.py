@@ -15,10 +15,11 @@ class MergeCellsRequest(BaseModel):
 
 class MergeCellsResponse(BaseModel):
     """Response model for merging cells."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     sheet_id: int
-    merged_range: str
     merge_type: str
+    range: str
+    cells_merged: int
     message: str
 
 def merge_cells_data(
@@ -75,11 +76,12 @@ def merge_cells_data(
         ).execute()
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
-            "merged_range": f"Rows {start_row_index}-{end_row_index-1}, Columns {start_column_index}-{end_column_index-1}",
             "merge_type": merge_type,
-            "message": f"Successfully merged cells in range {start_row_index}:{end_row_index-1}, {start_column_index}:{end_column_index-1} using {merge_type}"
+            "range": f"Rows {start_row_index}-{end_row_index-1}, Columns {start_column_index}-{end_column_index-1}",
+            "cells_merged": (end_row_index - start_row_index) * (end_column_index - start_column_index),
+            "message": f"Successfully merged cells in range {start_row_index}:{end_row_index-1}, {start_column_index}:{end_column_index-1}"
         }
         
     except HttpError as error:

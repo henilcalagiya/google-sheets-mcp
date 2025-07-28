@@ -94,7 +94,7 @@ def sheet_management_handler(
                         })
                 
                 response["metadata"] = {
-                    "spreadsheet_id": spreadsheet_id,
+                    "spreadsheet_name": spreadsheet_name,
                     "focused_sheets": focused_metadata,
                     "total_focused": len(focused_metadata)
                 }

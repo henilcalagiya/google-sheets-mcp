@@ -12,11 +12,11 @@ class ResizeColumnsRequest(BaseModel):
 
 class ResizeColumnsResponse(BaseModel):
     """Response model for resizing columns."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     sheet_id: int
     column_indices: List[int]
     widths: List[int]
-    resized_columns: int
+    columns_resized: int
     message: str
 
 def resize_columns_data(
@@ -71,11 +71,11 @@ def resize_columns_data(
         ).execute()
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
             "column_indices": column_indices,
             "widths": widths,
-            "resized_columns": len(column_indices),
+            "columns_resized": len(column_indices),
             "message": f"Successfully resized {len(column_indices)} columns"
         }
         

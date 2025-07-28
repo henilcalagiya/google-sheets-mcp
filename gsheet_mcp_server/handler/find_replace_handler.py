@@ -12,7 +12,7 @@ class FindReplaceRequest(BaseModel):
 
 class FindReplaceResponse(BaseModel):
     """Response model for find and replace operation."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     search_range: str
     find_text: str
     replace_text: str
@@ -51,7 +51,7 @@ def find_replace_text(
         values = result.get('values', [])
         if not values:
             return {
-                "spreadsheet_id": spreadsheet_id,
+                "spreadsheet_name": spreadsheet_name,
                 "search_range": search_range,
                 "find_text": find_text,
                 "replace_text": replace_text,
@@ -84,7 +84,7 @@ def find_replace_text(
             ).execute()
             
             return {
-                "spreadsheet_id": spreadsheet_id,
+                "spreadsheet_name": spreadsheet_name,
                 "search_range": search_range,
                 "find_text": find_text,
                 "replace_text": replace_text,
@@ -93,7 +93,7 @@ def find_replace_text(
             }
         else:
             return {
-                "spreadsheet_id": spreadsheet_id,
+                "spreadsheet_name": spreadsheet_name,
                 "search_range": search_range,
                 "find_text": find_text,
                 "replace_text": replace_text,

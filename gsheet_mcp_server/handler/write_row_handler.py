@@ -11,11 +11,9 @@ class WriteRowRequest(BaseModel):
 
 class WriteRowResponse(BaseModel):
     """Response model for writing a row of data."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     row_range: str
     updated_cells: int
-    updated_rows: int
-    updated_columns: int
     message: str
 
 def write_row_data(
@@ -54,11 +52,9 @@ def write_row_data(
         updated_columns = result.get('updatedColumns', 0)
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "row_range": row_range,
             "updated_cells": updated_cells,
-            "updated_rows": updated_rows,
-            "updated_columns": updated_columns,
             "message": f"Successfully wrote {len(values)} values to row {row_range}"
         }
         

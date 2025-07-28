@@ -20,10 +20,11 @@ class ConditionalFormatRequest(BaseModel):
 
 class ConditionalFormatResponse(BaseModel):
     """Response model for conditional formatting."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     sheet_id: int
-    formatted_range: str
-    rule_type: str
+    range: str
+    condition_type: str
+    format_applied: bool
     message: str
 
 def conditional_format_data(
@@ -113,12 +114,14 @@ def conditional_format_data(
             body={'requests': [request]}
         ).execute()
         
+        range_str = f"Rows {start_row_index}-{end_row_index-1}, Columns {start_column_index}-{end_column_index-1}"
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
-            "formatted_range": f"Rows {start_row_index}-{end_row_index-1}, Columns {start_column_index}-{end_column_index-1}",
-            "rule_type": rule_type,
-            "message": f"Successfully applied conditional formatting rule '{rule_type}' to range {start_row_index}:{end_row_index-1}, {start_column_index}:{end_column_index-1}"
+            "range": range_str,
+            "condition_type": rule_type,
+            "format_applied": True,
+            "message": f"Successfully applied conditional formatting to {range_str}"
         }
         
     except HttpError as error:

@@ -189,15 +189,14 @@ def create_data_table(
             ).execute()
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "sheet_name": sheet_name,
-            "range": range_name,
+            "table_range": f"{sheet_name}!A1:{end_col}{num_rows}",
             "headers": headers,
             "data_rows": len(data),
-            "total_rows": num_rows,
-            "total_columns": num_cols,
+            "total_cells": (len(data) + 1) * len(headers),
             "table_style": table_style,
-            "message": f"Successfully created {table_style} table with {len(headers)} columns and {len(data)} data rows"
+            "message": f"Successfully created {table_style} data table with {len(headers)} columns and {len(data)} rows"
         }
         
     except HttpError as error:

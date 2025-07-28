@@ -11,10 +11,10 @@ class DeleteRowsRequest(BaseModel):
 
 class DeleteRowsResponse(BaseModel):
     """Response model for deleting rows."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     sheet_id: int
-    row_indices: List[int]
-    deleted_rows: int
+    deleted_rows: List[int]
+    rows_deleted: int
     message: str
 
 def delete_rows_data(
@@ -62,11 +62,11 @@ def delete_rows_data(
         ).execute()
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
-            "row_indices": row_indices,
-            "deleted_rows": len(row_indices),
-            "message": f"Successfully deleted {len(row_indices)} rows: {row_indices}"
+            "deleted_rows": row_indices,
+            "rows_deleted": len(row_indices),
+            "message": f"Successfully deleted {len(row_indices)} rows"
         }
         
     except HttpError as error:

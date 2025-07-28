@@ -11,11 +11,9 @@ class AppendDataRequest(BaseModel):
 
 class AppendDataResponse(BaseModel):
     """Response model for appending data to a column."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     column_range: str
-    updated_cells: int
-    updated_rows: int
-    updated_columns: int
+    appended_values: int
     message: str
 
 def append_data_to_column(
@@ -56,12 +54,10 @@ def append_data_to_column(
         updated_columns = result.get('updates', {}).get('updatedColumns', 0)
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "column_range": column_range,
-            "updated_cells": updated_cells,
-            "updated_rows": updated_rows,
-            "updated_columns": updated_columns,
-            "message": f"Successfully appended {len(values)} values to column {column_range}"
+            "appended_values": len(values),
+            "message": f"Successfully appended {len(values)} values to {column_range}"
         }
         
     except HttpError as error:

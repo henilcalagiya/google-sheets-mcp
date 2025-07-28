@@ -10,8 +10,9 @@ class ClearRangeRequest(BaseModel):
 
 class ClearRangeResponse(BaseModel):
     """Response model for clearing a range."""
-    spreadsheet_id: str
-    cleared_range: str
+    spreadsheet_name: str
+    range_cleared: str
+    cleared_cells: str
     message: str
 
 def clear_range_data(
@@ -42,9 +43,10 @@ def clear_range_data(
         cleared_range = result.get('clearedRange', range)
         
         return {
-            "spreadsheet_id": spreadsheet_id,
-            "cleared_range": cleared_range,
-            "message": f"Successfully cleared range {cleared_range}"
+            "spreadsheet_name": spreadsheet_name,
+            "range_cleared": range,
+            "cleared_cells": cleared_range,
+            "message": f"Successfully cleared range {range}"
         }
         
     except HttpError as error:

@@ -11,11 +11,9 @@ class WriteGridRequest(BaseModel):
 
 class WriteGridResponse(BaseModel):
     """Response model for writing a grid of data."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     grid_range: str
     updated_cells: int
-    updated_rows: int
-    updated_columns: int
     message: str
 
 def write_grid_data(
@@ -51,12 +49,10 @@ def write_grid_data(
         updated_columns = result.get('updatedColumns', 0)
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "grid_range": grid_range,
             "updated_cells": updated_cells,
-            "updated_rows": updated_rows,
-            "updated_columns": updated_columns,
-            "message": f"Successfully wrote {len(values)} rows to grid {grid_range}"
+            "message": f"Successfully wrote grid data to {grid_range}"
         }
         
     except HttpError as error:

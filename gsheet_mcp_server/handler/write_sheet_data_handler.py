@@ -11,7 +11,7 @@ class WriteSheetRequest(BaseModel):
 
 class WriteSheetResponse(BaseModel):
     """Response model for writing sheet data."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     range: str
     updated_cells: int
     updated_rows: int
@@ -20,7 +20,7 @@ class WriteSheetResponse(BaseModel):
 
 class BatchUpdateResponse(BaseModel):
     """Response model for batch update operations."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     results: List[Dict[str, Any]]
     total_ranges: int
     message: str

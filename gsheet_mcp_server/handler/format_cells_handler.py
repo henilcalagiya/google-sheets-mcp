@@ -24,9 +24,10 @@ class FormatCellsRequest(BaseModel):
 
 class FormatCellsResponse(BaseModel):
     """Response model for formatting cells."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     sheet_id: int
-    formatted_range: str
+    range: str
+    format_applied: str
     message: str
 
 def format_cells_data(
@@ -126,11 +127,15 @@ def format_cells_data(
             body={'requests': [request]}
         ).execute()
         
+        range_str = f"Rows {start_row_index}-{end_row_index-1}, Columns {start_column_index}-{end_column_index-1}"
+        format_type = "cell"
+        
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
-            "formatted_range": f"Rows {start_row_index}-{end_row_index-1}, Columns {start_column_index}-{end_column_index-1}",
-            "message": f"Successfully formatted cells in range {start_row_index}:{end_row_index-1}, {start_column_index}:{end_column_index-1}"
+            "range": range_str,
+            "format_applied": format_type,
+            "message": f"Successfully applied {format_type} formatting to {range_str}"
         }
         
     except HttpError as error:

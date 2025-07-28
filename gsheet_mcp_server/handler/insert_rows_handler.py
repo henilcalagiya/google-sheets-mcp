@@ -12,11 +12,11 @@ class InsertRowsRequest(BaseModel):
 
 class InsertRowsResponse(BaseModel):
     """Response model for inserting rows."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     sheet_id: int
     start_index: int
     end_index: int
-    inserted_rows: int
+    rows_inserted: int
     message: str
 
 def insert_rows_data(
@@ -64,12 +64,12 @@ def insert_rows_data(
         ).execute()
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
             "start_index": start_index,
             "end_index": end_index,
-            "inserted_rows": num_rows,
-            "message": f"Successfully inserted {num_rows} rows starting at index {start_index}"
+            "rows_inserted": end_index - start_index,
+            "message": f"Successfully inserted {end_index - start_index} rows starting at index {start_index}"
         }
         
     except HttpError as error:

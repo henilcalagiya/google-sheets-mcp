@@ -11,10 +11,10 @@ class DeleteColumnsRequest(BaseModel):
 
 class DeleteColumnsResponse(BaseModel):
     """Response model for deleting columns."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     sheet_id: int
-    column_indices: List[int]
-    deleted_columns: int
+    deleted_columns: List[int]
+    columns_deleted: int
     message: str
 
 def delete_columns_data(
@@ -62,11 +62,11 @@ def delete_columns_data(
         ).execute()
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
-            "column_indices": column_indices,
-            "deleted_columns": len(column_indices),
-            "message": f"Successfully deleted {len(column_indices)} columns: {column_indices}"
+            "deleted_columns": column_indices,
+            "columns_deleted": len(column_indices),
+            "message": f"Successfully deleted {len(column_indices)} columns"
         }
         
     except HttpError as error:

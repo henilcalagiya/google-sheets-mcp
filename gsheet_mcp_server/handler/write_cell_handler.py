@@ -11,7 +11,7 @@ class WriteCellRequest(BaseModel):
 
 class WriteCellResponse(BaseModel):
     """Response model for writing a single cell."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     cell: str
     updated_cells: int
     message: str
@@ -50,7 +50,7 @@ def write_cell_data(
         updated_cells = result.get('updatedCells', 0)
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "cell": cell,
             "updated_cells": updated_cells,
             "message": f"Successfully wrote value to {cell}"

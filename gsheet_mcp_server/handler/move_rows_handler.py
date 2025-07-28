@@ -13,12 +13,12 @@ class MoveRowsRequest(BaseModel):
 
 class MoveRowsResponse(BaseModel):
     """Response model for moving rows."""
-    spreadsheet_id: str
+    spreadsheet_name: str
     sheet_id: int
     source_start_index: int
     source_end_index: int
     destination_index: int
-    moved_rows: int
+    rows_moved: int
     message: str
 
 def move_rows_data(
@@ -68,13 +68,13 @@ def move_rows_data(
         ).execute()
         
         return {
-            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
             "source_start_index": source_start_index,
             "source_end_index": source_end_index,
             "destination_index": destination_index,
-            "moved_rows": num_rows,
-            "message": f"Successfully moved {num_rows} rows from index {source_start_index} to {destination_index}"
+            "rows_moved": source_end_index - source_start_index,
+            "message": f"Successfully moved {source_end_index - source_start_index} rows from {source_start_index} to {destination_index}"
         }
         
     except HttpError as error:
