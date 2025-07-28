@@ -1,13 +1,12 @@
 """Helper utilities for Google Sheets operations."""
 
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from googleapiclient.errors import HttpError
 
 
 def get_spreadsheet_id_by_name(
     drive_service,
-    spreadsheet_name: str,
-    exact_match: bool = True
+    spreadsheet_name: str
 ) -> Optional[str]:
     """
     Convert a spreadsheet name to its ID by making direct API call to Google Drive.
@@ -15,13 +14,12 @@ def get_spreadsheet_id_by_name(
     Args:
         drive_service: Google Drive API service instance
         spreadsheet_name: Name of the spreadsheet to find
-        exact_match: If True, looks for exact name match. If False, looks for partial matches.
     
     Returns:
-        Spreadsheet ID if found, None otherwise
+        Spreadsheet ID if exactly one match found, None otherwise
     
     Raises:
-        RuntimeError: If Google Drive service is not initialized
+        RuntimeError: If Google Drive service not initialized or if multiple files with same name found
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
@@ -39,23 +37,94 @@ def get_spreadsheet_id_by_name(
         )
         files = results.get("files", [])
         
-        # Search through the results
+        # Collect all files with exact name match
+        matching_files = []
         for file in files:
             current_name = file["name"]
-            
-            if exact_match:
-                if current_name == spreadsheet_name:
-                    return file["id"]
-            else:
-                if spreadsheet_name.lower() in current_name.lower():
-                    return file["id"]
+            if current_name == spreadsheet_name:
+                matching_files.append({
+                    "id": file["id"],
+                    "name": file["name"]
+                })
         
-        # No match found
-        return None
+        # Check for errors based on number of matches
+        if len(matching_files) == 0:
+            raise RuntimeError(f"No spreadsheet found with name '{spreadsheet_name}'")
+        elif len(matching_files) > 1:
+            file_ids = [file["id"] for file in matching_files]
+            raise RuntimeError(f"Multiple spreadsheets found with name '{spreadsheet_name}'. IDs: {file_ids}")
+        
+        # Return the single matching file's ID
+        return matching_files[0]["id"]
         
     except HttpError as error:
         print(f"Error searching for spreadsheet '{spreadsheet_name}': {error}")
         return None
     except Exception as error:
         print(f"Unexpected error while searching for spreadsheet '{spreadsheet_name}': {error}")
-        return None 
+        return None
+
+
+
+
+
+def get_sheet_ids_by_names(
+    sheets_service,
+    spreadsheet_id: str,
+    sheet_names: List[str]
+) -> Dict[str, Optional[int]]:
+    """
+    Get sheet IDs from spreadsheet ID and sheet names.
+    Works for both single and multiple sheet lookups.
+    
+    Args:
+        sheets_service: Google Sheets API service instance
+        spreadsheet_id: ID of the spreadsheet
+        sheet_names: List of sheet names to find (can be single item)
+    
+    Returns:
+        Dictionary mapping sheet names to their IDs (None if not found)
+        
+    Examples:
+        # Single sheet lookup
+        result = get_sheet_ids_by_names(sheets_service, "123", ["Sheet1"])
+        # Returns: {"Sheet1": 456}
+        
+        # Multiple sheet lookup
+        result = get_sheet_ids_by_names(sheets_service, "123", ["Sheet1", "Data", "Summary"])
+        # Returns: {"Sheet1": 456, "Data": 789, "Summary": None}
+    
+    Raises:
+        RuntimeError: If Google Sheets service not initialized
+    """
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    try:
+        # Get spreadsheet metadata to find sheets
+        result = sheets_service.spreadsheets().get(
+            spreadsheetId=spreadsheet_id,
+            fields="sheets.properties"
+        ).execute()
+        
+        sheets = result.get("sheets", [])
+        
+        # Create lookup dictionary for all sheets
+        sheet_lookup = {}
+        for sheet in sheets:
+            props = sheet.get("properties", {})
+            sheet_lookup[props.get("title")] = props.get("sheetId")
+        
+        # Return results for requested sheet names
+        results = {}
+        for sheet_name in sheet_names:
+            results[sheet_name] = sheet_lookup.get(sheet_name)
+        
+        return results
+        
+    except HttpError as error:
+        print(f"Error getting sheet IDs for spreadsheet '{spreadsheet_id}': {error}")
+        return {name: None for name in sheet_names}
+    except Exception as error:
+        print(f"Unexpected error while getting sheet IDs: {error}")
+        return {name: None for name in sheet_names} 

@@ -79,10 +79,7 @@ The server returns structured data using Pydantic models:
 # SpreadsheetInfo model (for list_spreadsheets)
 {
     "spreadsheet_id": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
-    "name": "Sample Spreadsheet",
-    "created_time": "2024-01-01T00:00:00.000Z",
-    "modified_time": "2024-01-02T00:00:00.000Z",
-    "url": "https://docs.google.com/spreadsheets/d/..."
+    "name": "Sample Spreadsheet"
 }
 
 # SheetInfo model (for list_sheets_in_spreadsheet)

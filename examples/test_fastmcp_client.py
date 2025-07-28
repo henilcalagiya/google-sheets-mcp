@@ -147,7 +147,6 @@ async def test_fastmcp_server():
                 if hasattr(result, 'structuredContent') and result.structuredContent:
                     spreadsheet = result.structuredContent
                     print(f"  Created: {spreadsheet['name']} (ID: {spreadsheet['id']})")
-                    print(f"  URL: {spreadsheet['url']}")
                 else:
                     for content in result.content:
                         if hasattr(content, 'text'):

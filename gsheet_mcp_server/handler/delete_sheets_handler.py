@@ -1,11 +1,11 @@
-from typing import List, Dict, Any
+from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
+from gsheet_mcp_server.models import SheetInfo
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
 
-def rename_sheets(sheets_service, spreadsheet_id: str, sheet_ids: List[int], new_titles: List[str]) -> List[str]:
+def delete_sheets(sheets_service, spreadsheet_id: str, sheet_ids: List[int]) -> List[int]:
     requests = [
-        {"updateSheetProperties": {"properties": {"sheetId": sheet_id, "title": new_title}, "fields": "title"}}
-        for sheet_id, new_title in zip(sheet_ids, new_titles)
+        {"deleteSheet": {"sheetId": sheet_id}} for sheet_id in sheet_ids
     ]
     if not requests:
         return []
@@ -15,29 +15,22 @@ def rename_sheets(sheets_service, spreadsheet_id: str, sheet_ids: List[int], new
             body={"requests": requests}
         ).execute()
     except HttpError as error:
-        raise RuntimeError(f"Error renaming sheets: {error}")
-    return [f"Sheet {sheet_id} renamed to '{new_title}'" for sheet_id, new_title in zip(sheet_ids, new_titles)]
+        raise RuntimeError(f"Error deleting sheets: {error}")
+    return sheet_ids
 
-def rename_sheets_handler(
+def delete_sheets_handler(
     drive_service,
     sheets_service,
     spreadsheet_name: str,
-    sheet_names: List[str],
-    new_titles: List[str]
+    sheet_names: List[str]
 ) -> Dict[str, Any]:
-    """Handler to rename sheets in a Google Spreadsheet by their names."""
+    """Handler to delete sheets from a spreadsheet by their names."""
     
     # Validate input
     if not sheet_names:
         return {
             "success": False,
             "message": "No sheet names provided."
-        }
-    
-    if len(sheet_names) != len(new_titles):
-        return {
-            "success": False,
-            "message": f"Number of sheet names ({len(sheet_names)}) must match number of new titles ({len(new_titles)})."
         }
     
     # Get spreadsheet ID
@@ -54,37 +47,35 @@ def rename_sheets_handler(
     # Filter out sheets that don't exist
     existing_sheet_ids = []
     existing_sheet_names = []
-    existing_new_titles = []
     
-    for i, sheet_name in enumerate(sheet_names):
+    for sheet_name in sheet_names:
         sheet_id = sheet_id_map.get(sheet_name)
         if sheet_id is not None:
             existing_sheet_ids.append(sheet_id)
             existing_sheet_names.append(sheet_name)
-            existing_new_titles.append(new_titles[i])
         else:
             print(f"Warning: Sheet '{sheet_name}' not found, skipping.")
     
     if not existing_sheet_ids:
         return {
             "success": False,
-            "message": "No valid sheets found to rename."
+            "message": "No valid sheets found to delete."
         }
     
     try:
-        # Rename the sheets
-        results = rename_sheets(sheets_service, spreadsheet_id, existing_sheet_ids, existing_new_titles)
+        # Delete the sheets
+        deleted_ids = delete_sheets(sheets_service, spreadsheet_id, existing_sheet_ids)
         
         return {
             "success": True,
             "spreadsheet_name": spreadsheet_name,
-            "renamed_sheets": list(zip(existing_sheet_names, existing_new_titles)),
-            "sheets_renamed": len(existing_sheet_ids),
-            "message": f"Successfully renamed {len(existing_sheet_ids)} sheet(s) in '{spreadsheet_name}'"
+            "deleted_sheet_names": existing_sheet_names,
+            "sheets_deleted": len(deleted_ids),
+            "message": f"Successfully deleted {len(deleted_ids)} sheet(s) from '{spreadsheet_name}'"
         }
         
     except Exception as e:
         return {
             "success": False,
-            "message": f"Error renaming sheets: {str(e)}"
+            "message": f"Error deleting sheets: {str(e)}"
         } 

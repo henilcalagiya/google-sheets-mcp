@@ -11,9 +11,12 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
-from .handler.spreadsheet_management_handler import spreadsheet_management_handler
-from .handler.sheet_management_handler import sheet_management_handler
-from .models import SpreadsheetInfo, SheetInfo
+from .handler.list_spreadsheets_handler import list_all_spreadsheets_handler
+from .handler.rename_spreadsheet_handler import rename_spreadsheet_handler
+from .handler.list_sheets_handler import list_sheets_handler
+from .handler.add_sheets_handler import add_sheets_handler
+from .handler.delete_sheets_handler import delete_sheets_handler
+from .models import SheetInfo
 from .handler.rename_sheets_handler import rename_sheets_handler
 from .handler.read_sheet_data_handler import read_multiple_ranges, get_sheet_metadata
 from .handler.write_cell_handler import write_cell_data
@@ -75,90 +78,138 @@ else:
 
 
 @mcp.tool()
-def spreadsheet_management_tool(
-    spreadsheet_name: str = Field(..., description="The name of the spreadsheet"),
-    new_title: str = Field(..., description="The new title of the spreadsheet"),
+def list_all_spreadsheets(
     max_results: int = Field(default=10, description="The maximum number of spreadsheets to return")
 ) -> Dict[str, Any]:
-    """Combined tool: List all spreadsheets and optionally rename a spreadsheet by name.
-    - If spreadsheet_name and new_title are provided, renames the spreadsheet.
-    - Always returns the list of spreadsheets after any operation.
+    """List all spreadsheets accessible to the user.
+    
+    Returns a list of all Google Sheets spreadsheets that the user has access to.
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return spreadsheet_management_handler(
+    return list_all_spreadsheets_handler(
         drive_service=drive_service,
         sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        new_title=new_title,
         max_results=max_results
     )
 
 
-
-
 @mcp.tool()
-def sheet_management_tool(
-    spreadsheet_name: str = Field(..., description="Required: The name of the Google Spreadsheet"),
-    add_sheet_names: Optional[List[str]] = Field(default_factory=list, description="Optional: List of sheet names to add as new sheets. Pass an empty list if not adding."),
-    delete_sheet_ids: Optional[List[int]] = Field(default_factory=list, description="Optional: List of sheet IDs to delete. Pass an empty list if not deleting."),
-    include_metadata: bool = Field(default=True, description="Optional: Whether to include detailed metadata. Set to False for faster response with basic info only."),
-    target_sheet_names: Optional[List[str]] = Field(default_factory=list, description="Optional: List of specific sheet names to get metadata for. If provided, only returns metadata for these sheets. If empty list, returns metadata for all sheets.")
+def rename_spreadsheet_tool(
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet to rename"),
+    new_title: str = Field(..., description="The new title for the spreadsheet")
 ) -> Dict[str, Any]:
-    """Sheet management with metadata support.
+    """Rename a specific spreadsheet by its name.
     
-    This tool combines sheet management operations (add/delete/list) with detailed metadata.
-    
-    Features:
-    - List all sheets with basic info
-    - Add new sheets
-    - Delete existing sheets
-    - Include detailed metadata (optional)
-    - Focus metadata on specific sheets (optional)
-    
-    Examples:
-    - List all sheets with metadata: include_metadata=True, target_sheet_names=[]
-    - Focus on specific sheet: target_sheet_names=["Sheet1"]
-    - Focus on multiple sheets: target_sheet_names=["Sheet1", "Sheet2", "Data"]
-    - Fast operation: include_metadata=False
-    - Add sheets with metadata: add_sheet_names=["NewSheet"], include_metadata=True
-    
-    Returns a dict with keys: 'sheets', 'added', 'deleted', 'metadata', 'operations_performed', 'message'.
+    Renames a Google Sheets spreadsheet to a new title.
     """
-
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return sheet_management_handler(
+    return rename_spreadsheet_handler(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
-        add_sheet_names=add_sheet_names,
-        delete_sheet_ids=delete_sheet_ids,
-        include_metadata=include_metadata,
-        target_sheet_names=target_sheet_names
+        new_title=new_title
     )
+
+
+
+
+@mcp.tool()
+def list_sheets_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet")
+) -> Dict[str, Any]:
+    """List all sheets in a Google Spreadsheet.
+    
+    Returns basic information about all sheets in the specified spreadsheet.
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    return list_sheets_handler(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name
+    )
+
+
+@mcp.tool()
+def add_sheets_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_names: List[str] = Field(..., description="List of sheet names to add as new sheets")
+) -> Dict[str, Any]:
+    """Add new sheets to a Google Spreadsheet.
+    
+    Creates new sheets with the specified names in the spreadsheet.
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    return add_sheets_handler(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        sheet_names=sheet_names
+    )
+
+
+@mcp.tool()
+def delete_sheets_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_names: List[str] = Field(..., description="List of sheet names to delete")
+) -> Dict[str, Any]:
+    """Delete sheets from a Google Spreadsheet.
+    
+    Removes the specified sheets from the spreadsheet by their names.
+    
+    Examples:
+    - Delete single sheet: sheet_names=["Sheet1"]
+    - Delete multiple sheets: sheet_names=["Sheet1", "Data", "Temp"]
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    return delete_sheets_handler(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        sheet_names=sheet_names
+    )
+
+
+
 
 @mcp.tool()
 def rename_sheets_tool(
-    spreadsheet_name: str = Field(..., description="must pass the spreadsheet name"),
-    sheet_ids: List[int] = Field(..., description="Required: List of sheet IDs to rename"),
-    new_titles: List[str] = Field(..., description="Required: List of new titles for the sheets")
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_names: List[str] = Field(..., description="List of sheet names to rename"),
+    new_titles: List[str] = Field(..., description="List of new titles for the sheets")
 ) -> Dict[str, Any]:
     """
     Rename sheets in a Google Spreadsheet.
-    - spreadsheet_name: must pass the spreadsheet name
-    - sheet_ids: list of sheet IDs to rename
-    - new_titles: list of new titles for the sheets
+    
+    Renames multiple sheets by their names. The number of sheet names must match the number of new titles.
+    
+    Examples:
+    - Rename single sheet: sheet_names=["Sheet1"], new_titles=["Summary"]
+    - Rename multiple sheets: sheet_names=["Sheet1", "Data"], new_titles=["Summary", "Analysis"]
     """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     return rename_sheets_handler(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
-        sheet_ids=sheet_ids,
+        sheet_names=sheet_names,
         new_titles=new_titles
     )
 
@@ -349,7 +400,7 @@ def find_replace(
 @mcp.tool()
 def insert_rows(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
+    sheet_name: str = Field(..., description="The name of the sheet"),
     start_index: int = Field(..., description="Starting row index (0-based)"),
     end_index: int = Field(..., description="Ending row index (0-based, exclusive)")
 ) -> Dict[str, Any]:
@@ -357,10 +408,12 @@ def insert_rows(
     Insert rows in a Google Sheet.
     
     Examples:
-    - Insert 1 row: start_index=5, end_index=6
-    - Insert 3 rows: start_index=10, end_index=13
-    - Insert at beginning: start_index=0, end_index=1
+    - Insert 1 row: sheet_name="Sheet1", start_index=5, end_index=6
+    - Insert 3 rows: sheet_name="Data", start_index=10, end_index=13
+    - Insert at beginning: sheet_name="Summary", start_index=0, end_index=1
     """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
@@ -368,7 +421,7 @@ def insert_rows(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
-        sheet_id=sheet_id,
+        sheet_name=sheet_name,
         start_index=start_index,
         end_index=end_index
     )
@@ -377,17 +430,19 @@ def insert_rows(
 @mcp.tool()
 def delete_rows(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
+    sheet_name: str = Field(..., description="The name of the sheet"),
     row_indices: List[int] = Field(..., description="List of row indices to delete (0-based)")
 ) -> Dict[str, Any]:
     """
     Delete entire rows from a Google Sheet.
     
     Examples:
-    - Delete single row: row_indices=[5]
-    - Delete multiple rows: row_indices=[1, 3, 5]
-    - Delete first row: row_indices=[0]
+    - Delete single row: sheet_name="Sheet1", row_indices=[5]
+    - Delete multiple rows: sheet_name="Data", row_indices=[1, 3, 5]
+    - Delete first row: sheet_name="Summary", row_indices=[0]
     """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
@@ -395,7 +450,7 @@ def delete_rows(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
-        sheet_id=sheet_id,
+        sheet_name=sheet_name,
         row_indices=row_indices
     )
 
@@ -403,7 +458,7 @@ def delete_rows(
 @mcp.tool()
 def insert_columns(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
+    sheet_name: str = Field(..., description="The name of the sheet"),
     start_index: int = Field(..., description="Starting column index (0-based)"),
     end_index: int = Field(..., description="Ending column index (0-based, exclusive)")
 ) -> Dict[str, Any]:
@@ -411,10 +466,12 @@ def insert_columns(
     Insert columns in a Google Sheet.
     
     Examples:
-    - Insert 1 column: start_index=2, end_index=3
-    - Insert 3 columns: start_index=5, end_index=8
-    - Insert at beginning: start_index=0, end_index=1
+    - Insert 1 column: sheet_name="Sheet1", start_index=2, end_index=3
+    - Insert 3 columns: sheet_name="Data", start_index=5, end_index=8
+    - Insert at beginning: sheet_name="Summary", start_index=0, end_index=1
     """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
@@ -422,7 +479,7 @@ def insert_columns(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
-        sheet_id=sheet_id,
+        sheet_name=sheet_name,
         start_index=start_index,
         end_index=end_index
     )
@@ -431,17 +488,19 @@ def insert_columns(
 @mcp.tool()
 def delete_columns(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
+    sheet_name: str = Field(..., description="The name of the sheet"),
     column_indices: List[int] = Field(..., description="List of column indices to delete (0-based)")
 ) -> Dict[str, Any]:
     """
     Delete entire columns from a Google Sheet.
     
     Examples:
-    - Delete single column: column_indices=[2]
-    - Delete multiple columns: column_indices=[1, 3, 5]
-    - Delete first column: column_indices=[0]
+    - Delete single column: sheet_name="Sheet1", column_indices=[2]
+    - Delete multiple columns: sheet_name="Data", column_indices=[1, 3, 5]
+    - Delete first column: sheet_name="Summary", column_indices=[0]
     """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
@@ -449,7 +508,7 @@ def delete_columns(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
-        sheet_id=sheet_id,
+        sheet_name=sheet_name,
         column_indices=column_indices
     )
 
@@ -457,7 +516,7 @@ def delete_columns(
 @mcp.tool()
 def move_rows(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
+    sheet_name: str = Field(..., description="The name of the sheet"),
     source_start_index: int = Field(..., description="Starting row index to move (0-based)"),
     source_end_index: int = Field(..., description="Ending row index to move (0-based, exclusive)"),
     destination_index: int = Field(..., description="Destination row index (0-based)")
@@ -466,10 +525,12 @@ def move_rows(
     Move rows in a Google Sheet.
     
     Examples:
-    - Move 1 row: source_start_index=5, source_end_index=6, destination_index=10
-    - Move 3 rows: source_start_index=10, source_end_index=13, destination_index=0
-    - Move to end: source_start_index=2, source_end_index=5, destination_index=20
+    - Move 1 row: sheet_name="Sheet1", source_start_index=5, source_end_index=6, destination_index=10
+    - Move 3 rows: sheet_name="Data", source_start_index=10, source_end_index=13, destination_index=0
+    - Move to end: sheet_name="Summary", source_start_index=2, source_end_index=5, destination_index=20
     """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
@@ -477,7 +538,7 @@ def move_rows(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
-        sheet_id=sheet_id,
+        sheet_name=sheet_name,
         source_start_index=source_start_index,
         source_end_index=source_end_index,
         destination_index=destination_index
@@ -487,7 +548,7 @@ def move_rows(
 @mcp.tool()
 def resize_columns(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_id: int = Field(..., description="The ID of the sheet (0-based)"),
+    sheet_name: str = Field(..., description="The name of the sheet"),
     column_indices: List[int] = Field(..., description="List of column indices to resize (0-based)"),
     widths: List[int] = Field(..., description="List of widths in pixels for each column")
 ) -> Dict[str, Any]:
@@ -495,10 +556,12 @@ def resize_columns(
     Resize columns in a Google Sheet.
     
     Examples:
-    - Resize 1 column: column_indices=[0], widths=[150]
-    - Resize multiple columns: column_indices=[0, 1, 2], widths=[100, 200, 300]
-    - Make columns wider: column_indices=[0, 1], widths=[200, 250]
+    - Resize 1 column: sheet_name="Sheet1", column_indices=[0], widths=[150]
+    - Resize multiple columns: sheet_name="Data", column_indices=[0, 1, 2], widths=[100, 200, 300]
+    - Make columns wider: sheet_name="Summary", column_indices=[0, 1], widths=[200, 250]
     """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
@@ -506,7 +569,7 @@ def resize_columns(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
-        sheet_id=sheet_id,
+        sheet_name=sheet_name,
         column_indices=column_indices,
         widths=widths
     )

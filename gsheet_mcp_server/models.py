@@ -5,9 +5,6 @@ class SpreadsheetInfo(BaseModel):
     """Spreadsheet information structure."""
     spreadsheet_id: str = Field(description="Spreadsheet ID")
     name: str = Field(description="Spreadsheet name")
-    created_time: str = Field(description="Creation time")
-    modified_time: str = Field(description="Last modified time")
-    url: str = Field(description="Spreadsheet URL")
 
 class SheetInfo(BaseModel):
     """Sheet information structure."""
