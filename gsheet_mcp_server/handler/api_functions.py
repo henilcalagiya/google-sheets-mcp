@@ -17,15 +17,12 @@ def list_spreadsheets(drive_service, max_results: int = 10) -> List[Dict[str, An
         files = results.get("files", [])
         spreadsheet_infos = []
         for file in files:
-            spreadsheet_infos.append(
-                SpreadsheetInfo(
-                    spreadsheet_id=file["id"],
-                    name=file["name"],
-                    created_time=file["createdTime"],
-                    modified_time=file["modifiedTime"],
-                    url=file.get("webViewLink", ""),
-                ).model_dump()
-            )
+            spreadsheet_infos.append({
+                "name": file["name"],
+                "created_time": file["createdTime"],
+                "modified_time": file["modifiedTime"],
+                "url": file.get("webViewLink", ""),
+            })
         return spreadsheet_infos
     except HttpError as error:
         raise RuntimeError(f"Error listing spreadsheets: {error}")
