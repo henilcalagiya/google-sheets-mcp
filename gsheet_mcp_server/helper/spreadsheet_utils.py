@@ -128,3 +128,73 @@ def get_sheet_ids_by_names(
     except Exception as error:
         print(f"Unexpected error while getting sheet IDs: {error}")
         return {name: None for name in sheet_names} 
+
+
+def get_table_ids_by_names(
+    sheets_service,
+    spreadsheet_id: str,
+    sheet_name: str,
+    table_names: List[str]
+) -> Dict[str, Optional[str]]:
+    """
+    Get table IDs from spreadsheet ID, sheet name, and table names.
+    Works for both single and multiple table lookups.
+    
+    Args:
+        sheets_service: Google Sheets API service instance
+        spreadsheet_id: ID of the spreadsheet
+        sheet_name: Name of the sheet containing the tables
+        table_names: List of table names to find (can be single item)
+    
+    Returns:
+        Dictionary mapping table names to their IDs (None if not found)
+        
+    Examples:
+        # Single table lookup
+        result = get_table_ids_by_names(sheets_service, "123", "Sheet1", ["SalesData"])
+        # Returns: {"SalesData": "4567890123"}
+        
+        # Multiple table lookup
+        result = get_table_ids_by_names(sheets_service, "123", "Sheet1", ["SalesData", "Inventory", "Summary"])
+        # Returns: {"SalesData": "4567890123", "Inventory": "7890123456", "Summary": None}
+    
+    Raises:
+        RuntimeError: If Google Sheets service not initialized
+    """
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    try:
+        # Get spreadsheet to find table information
+        result = sheets_service.spreadsheets().get(
+            spreadsheetId=spreadsheet_id,
+            fields="sheets.properties,sheets.tables"
+        ).execute()
+        
+        # Find the specific sheet
+        for sheet in result.get("sheets", []):
+            props = sheet.get("properties", {})
+            if props.get("title") == sheet_name:
+                tables = sheet.get("tables", [])
+                
+                # Create lookup dictionary for all tables in this sheet
+                table_lookup = {}
+                for table in tables:
+                    table_lookup[table.get("name")] = table.get("tableId")
+                
+                # Return results for requested table names
+                results = {}
+                for table_name in table_names:
+                    results[table_name] = table_lookup.get(table_name)
+                
+                return results
+        
+        # Sheet not found, return None for all requested table names
+        return {name: None for name in table_names}
+        
+    except HttpError as error:
+        print(f"Error getting table IDs for spreadsheet '{spreadsheet_id}' sheet '{sheet_name}': {error}")
+        return {name: None for name in table_names}
+    except Exception as error:
+        print(f"Unexpected error while getting table IDs: {error}")
+        return {name: None for name in table_names} 

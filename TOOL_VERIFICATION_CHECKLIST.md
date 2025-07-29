@@ -1,183 +1,209 @@
-# Google Sheets MCP Server - Tool Verification Checklist
+# Google Sheets MCP Server - Complete Tool Structure Plan
 
-This document lists all available tools in the Google Sheets MCP server for verification and testing purposes.
+## 🎯 Comprehensive Tool Organization & Implementation Status
 
-## 📋 Tool List
+### **Spreadsheet Tools** - High-level operations
+- [ ] **CreateSpreadsheetRequest** - Create new spreadsheets
+- [ ] **GetSpreadsheetMetadata** - Retrieve spreadsheet properties and metadata
+- [ ] **UpdateSpreadsheetProperties** - Modify spreadsheet-level properties
+- [ ] **DeleteSpreadsheetRequest** - Delete spreadsheets (via Drive API)
 
-### 1. **list_all_spreadsheets**
-- **Purpose**: List all spreadsheets accessible to the user
-- **Function**: Returns a list of all Google Sheets spreadsheets
+### **Currently Implemented Spreadsheet Tools**
+- [x] **list_all_spreadsheets** - List all spreadsheets accessible to the user
+- [x] **rename_spreadsheet_tool** - Rename a specific spreadsheet by its name
 
-### 2. **rename_spreadsheet_tool**
-- **Purpose**: Rename a specific spreadsheet by its name
-- **Function**: Renames a Google Sheets spreadsheet to a new title
+### **Sheet (Tab) Tools** - Sheet management operations
+- [ ] **AddSheetRequest** - Add new sheets to spreadsheet
+- [ ] **DeleteSheetRequest** - Delete sheets from spreadsheet
+- [ ] **DuplicateSheetRequest** - Duplicate existing sheets
+- [ ] **UpdateSheetPropertiesRequest** - Rename, resize, or change sheet properties
+- [ ] **SortRangeRequest** - Sort data on sheets
+- [ ] **AutoFillRequest** - Autofill data based on patterns
+- [ ] **InsertDimensionRequest** - Add rows or columns
+- [ ] **DeleteDimensionRequest** - Remove rows or columns
+- [ ] **MoveDimensionRequest** - Move rows or columns
 
-### 3. **list_sheets_tool**
-- **Purpose**: List all sheets in a Google Spreadsheet
-- **Function**: Returns basic information about all sheets
+### **Currently Implemented Sheet Tools**
+- [x] **list_sheets_tool** - List all sheets in a Google Spreadsheet
+- [x] **add_sheets_tool** - Add new sheets to a Google Spreadsheet
+- [x] **delete_sheets_tool** - Delete sheets from a Google Spreadsheet
+- [x] **rename_sheets_tool** - Rename sheets in a Google Spreadsheet
+- [x] **insert_rows** - Insert rows in a Google Sheet
+- [x] **delete_rows** - Delete entire rows from a Google Sheet
+- [x] **insert_columns** - Insert columns in a Google Sheet
+- [x] **delete_columns** - Delete entire columns from a Google Sheet
+- [x] **move_rows** - Move rows to different positions
+- [x] **resize_columns** - Resize columns to specified widths
 
-### 4. **add_sheets_tool**
-- **Purpose**: Add new sheets to a Google Spreadsheet
-- **Function**: Creates new sheets with specified names
+### **Table Tools** - Structured data operations
+- [x] **AddTableRequest** - Create new tables
+- [ ] **UpdateTableRequest** - Modify table properties
+- [x] **DeleteTableRequest** - Remove tables
+- [x] **AppendCellsRequest** - Add cells to tables (with tableId)
+- [x] **InsertRangeRequest** - Insert ranges within tables
+- [ ] **DeleteRangeRequest** - Remove ranges from tables
+- [ ] **UpdateTableColumnRequest** - Modify table column properties
 
-### 5. **delete_sheets_tool**
-- **Purpose**: Delete sheets from a Google Spreadsheet
-- **Function**: Removes specified sheets by their IDs
+### **Currently Implemented Table Tools**
+- [x] **add_table_tool** - Create native Google Sheets tables using AddTableRequest
+- [x] **delete_table_tool** - Delete native Google Sheets tables using DeleteTableRequest
+- [x] **add_table_records_tool** - Add records to native Google Sheets tables (supports APPEND and INSERT operations)
+- [x] **modify_table_rows_tool** - Insert/delete rows within native Google Sheets tables using InsertDimensionRequest/DeleteDimensionRequest
+- [x] **modify_table_columns_tool** - Insert/delete columns within native Google Sheets tables using InsertDimensionRequest/DeleteDimensionRequest
 
-### 6. **rename_sheets_tool**
-- **Purpose**: Rename specific sheets within a spreadsheet
-- **Function**: Rename multiple sheets by their IDs
+### **Chart Tools** - Visualization operations
+- [ ] **AddChartRequest** - Embed charts in sheets
+- [ ] **UpdateChartSpecRequest** - Change chart type and data
+- [ ] **UpdateEmbeddedObjectPositionRequest** - Move chart positions
+- [ ] **DeleteEmbeddedObjectRequest** - Remove charts
 
-### 7. **read_sheet_data_tool**
-- **Purpose**: Read data from multiple ranges in a spreadsheet
-- **Function**: Flexible range reading with single or multiple ranges
+### **Currently Implemented Chart Tools**
+- [x] **create_chart** - Create charts in Google Sheets
 
-### 8. **write_cell**
-- **Purpose**: Write a single value to a specific cell
-- **Function**: Write text, numbers, or formulas to individual cells
+### **Data Tools** - Cell and range operations
+- [ ] **GetValuesRequest** - Read cell or range values
+- [ ] **UpdateValuesRequest** - Write cell/range values
+- [ ] **BatchGetValuesRequest** - Read multiple ranges
+- [ ] **BatchUpdateValuesRequest** - Write multiple ranges
+- [ ] **ClearValuesRequest** - Clear cell values
+- [ ] **UpdateCellsRequest** - Update cell content and formatting
+- [ ] **RepeatCellRequest** - Apply formatting/formulas to ranges
+- [ ] **CopyPasteRequest** - Copy and paste data
+- [ ] **FindReplaceRequest** - Search and replace text
 
-### 9. **write_row**
-- **Purpose**: Write values to a single row in a spreadsheet
-- **Function**: Write a list of values to a specified row range
+### **Currently Implemented Data Tools**
+- [x] **read_sheet_data_tool** - Read data from multiple ranges in a spreadsheet
+- [x] **write_cell** - Write a single value to a specific cell
+- [x] **write_row** - Write values to a single row in a spreadsheet
+- [x] **write_grid** - Write a 2D grid of values to a range
+- [x] **append_data** - Append values to the end of a column
+- [x] **clear_range** - Clear all values from a range (keeps formatting)
+- [x] **find_replace** - Find and replace text in a range
 
-### 10. **write_grid**
-- **Purpose**: Write a 2D grid of values to a range
-- **Function**: Write 2D array data to specified grid range
+### **Formatting Tools** - Styling and appearance
+- [ ] **SetDataValidationRequest** - Apply data validation rules
+- [ ] **UpdateBordersRequest** - Modify cell borders
+- [ ] **MergeCellsRequest** - Merge cell ranges
+- [ ] **UnmergeCellsRequest** - Unmerge cell ranges
+- [ ] **AddConditionalFormatRuleRequest** - Add conditional formatting
+- [ ] **UpdateConditionalFormatRuleRequest** - Modify conditional formatting
+- [ ] **DeleteConditionalFormatRuleRequest** - Remove conditional formatting
+- [ ] **TextToColumnsRequest** - Split text into columns
+- [ ] **PasteDataRequest** - Paste data with specific options
 
-### 11. **append_data**
-- **Purpose**: Append values to the end of a column
-- **Function**: Add new data to existing columns
+### **Currently Implemented Formatting Tools**
+- [x] **format_cells** - Apply formatting to cells (colors, fonts, alignment)
+- [x] **conditional_format** - Apply conditional formatting rules
+- [x] **merge_cells** - Merge cells in a range
 
-### 12. **clear_range**
-- **Purpose**: Clear all values from a range (keeps formatting)
-- **Function**: Remove data while preserving cell formatting
+### **Named Range Tools** - Range management
+- [ ] **AddNamedRangeRequest** - Create named ranges
+- [ ] **UpdateNamedRangeRequest** - Modify named ranges
+- [ ] **DeleteNamedRangeRequest** - Remove named ranges
 
-### 13. **find_replace**
-- **Purpose**: Find and replace text in a range
-- **Function**: Search and replace operations with case sensitivity options
+### **Currently Implemented Named Range Tools**
+- [ ] None implemented yet
 
-### 14. **insert_rows**
-- **Purpose**: Insert rows in a Google Sheet
-- **Function**: Add new rows at specified positions
+### **Protection Tools** - Security and access control
+- [ ] **AddProtectedRangeRequest** - Protect specific ranges
+- [ ] **UpdateProtectedRangeRequest** - Modify protected range settings
+- [ ] **DeleteProtectedRangeRequest** - Remove range protection
 
-### 15. **delete_rows**
-- **Purpose**: Delete entire rows from a Google Sheet
-- **Function**: Remove specific rows by their indices
+### **Currently Implemented Protection Tools**
+- [ ] None implemented yet
 
-### 16. **insert_columns**
-- **Purpose**: Insert columns in a Google Sheet
-- **Function**: Add new columns at specified positions
+### **Filter Tools** - Data filtering operations
+- [ ] **SetBasicFilterRequest** - Apply basic filters
+- [ ] **ClearBasicFilterRequest** - Remove basic filters
+- [ ] **AddFilterViewRequest** - Create filter views
+- [ ] **UpdateFilterViewRequest** - Modify filter views
+- [ ] **DeleteFilterViewRequest** - Remove filter views
+- [ ] **DuplicateFilterViewRequest** - Copy filter views
 
-### 17. **delete_columns**
-- **Purpose**: Delete entire columns from a Google Sheet
-- **Function**: Remove specific columns by their indices
+### **Currently Implemented Filter Tools**
+- [ ] None implemented yet
 
-### 18. **move_rows**
-- **Purpose**: Move rows to different positions
-- **Function**: Relocate rows from source to destination
+### **Pivot Table Tools** - Advanced data analysis
+- [ ] **AddPivotTableRequest** - Create pivot tables
+- [ ] **UpdatePivotTableRequest** - Modify pivot table structure
 
-### 19. **resize_columns**
-- **Purpose**: Resize columns to specified widths
-- **Function**: Adjust column widths in pixels
+### **Currently Implemented Pivot Table Tools**
+- [ ] None implemented yet
 
-### 20. **format_cells**
-- **Purpose**: Apply formatting to cells (colors, fonts, alignment)
-- **Function**: Comprehensive cell styling options
+### **Developer Tools** - Advanced metadata operations
+- [ ] **CreateDeveloperMetadataRequest** - Add developer metadata
+- [ ] **UpdateDeveloperMetadataRequest** - Modify developer metadata
+- [ ] **DeleteDeveloperMetadataRequest** - Remove developer metadata
+- [ ] **GetDeveloperMetadataRequest** - Retrieve developer metadata
 
-### 21. **conditional_format**
-- **Purpose**: Apply conditional formatting rules
-- **Function**: Dynamic formatting based on cell values
+### **Currently Implemented Developer Tools**
+- [ ] None implemented yet
 
-### 22. **merge_cells**
-- **Purpose**: Merge cells in a range
-- **Function**: Combine multiple cells into single cells
+### **Analysis Tools** - Sheet analysis and insights
+- [x] **sheet_summary_tool** - Get comprehensive summary of sheet data
+- [x] **analyze_sheet_entities_tool** - Analyze sheet for entities and patterns
 
-### 23. **create_data_table_tool**
-- **Purpose**: Create formatted data tables with professional styling
-- **Function**: Complete table creation with headers, data, and formatting
+## 📊 Tool Categories Summary
 
-## 📊 Tool Categories
+### **Spreadsheet Level** (4 planned, 2 implemented)
+- High-level spreadsheet management
 
-### **Data Reading Tools**
-- read_sheet_data_tool
+### **Sheet Level** (9 planned, 10 implemented)
+- Sheet creation, deletion, and manipulation
 
-### **Data Writing Tools**
-- write_cell
-- write_row
-- write_grid
-- append_data
+### **Table Level** (7 planned, 3 implemented)
+- Structured data table operations
 
-### **Data Management Tools**
-- clear_range
-- find_replace
+### **Chart Level** (4 planned, 1 implemented)
+- Chart creation and management
 
-### **Structure Management Tools**
-- insert_rows
-- delete_rows
-- insert_columns
-- delete_columns
-- move_rows
+### **Data Level** (9 planned, 7 implemented)
+- Core data reading and writing operations
 
-### **Formatting Tools**
-- resize_columns
-- format_cells
-- conditional_format
-- merge_cells
+### **Formatting Level** (9 planned, 3 implemented)
+- Cell styling and appearance management
 
-### **Spreadsheet Management Tools**
-- list_all_spreadsheets
-- rename_spreadsheet_tool
-- list_sheets_tool
-- add_sheets_tool
-- delete_sheets_tool
-- rename_sheets_tool
+### **Named Range Level** (3 planned, 0 implemented)
+- Named range management
 
-### **Advanced Tools**
-- create_data_table_tool
+### **Protection Level** (3 planned, 0 implemented)
+- Range protection and security
 
-## ✅ Verification Status
+### **Filter Level** (6 planned, 0 implemented)
+- Data filtering and views
 
-- [x] Tool 1: list_all_spreadsheets
-- [x] Tool 2: rename_spreadsheet_tool ✅ (Updated to remove spreadsheet ID from response)
-- [x] Tool 3: list_sheets_tool ✅ (Updated to remove sheet IDs from response)
-- [x] Tool 4: add_sheets_tool ✅
-- [x] Tool 5: delete_sheets_tool ✅ (Updated to use sheet names, removed sheet IDs from response)
-- [x] Tool 6: rename_sheets_tool ✅ (Updated to use sheet names)
-- [ ] Tool 7: read_sheet_data_tool
-- [ ] Tool 8: write_cell
-- [ ] Tool 9: write_row
-- [ ] Tool 10: write_grid
-- [ ] Tool 11: append_data
-- [ ] Tool 12: clear_range
-- [ ] Tool 13: find_replace
-- [ ] Tool 14: insert_rows
-- [ ] Tool 15: delete_rows
-- [ ] Tool 16: insert_columns
-- [ ] Tool 17: delete_columns
-- [ ] Tool 18: move_rows
-- [ ] Tool 19: resize_columns
-- [ ] Tool 20: format_cells
-- [ ] Tool 21: conditional_format
-- [ ] Tool 22: merge_cells
-- [ ] Tool 23: create_data_table_tool
+### **Pivot Table Level** (2 planned, 0 implemented)
+- Advanced data analysis
 
-## 📝 Notes
+### **Developer Level** (4 planned, 0 implemented)
+- Advanced metadata operations
 
-- **Total Tools**: 23 tools available
-- **Categories**: 7 different functional categories
-- **Coverage**: Complete Google Sheets API functionality
-- **Response Format**: All tools return structured JSON responses
-- **Error Handling**: Comprehensive error handling for all operations
+### **Analysis Level** (2 implemented)
+- Sheet analysis and insights
 
-## 🔧 Testing Recommendations
+**Total Planned Tools: 53**
+**Total Implemented Tools: 26**
+**Total Remaining Tools: 27**
 
-1. **Basic Operations**: Test read/write operations first
-2. **Structure Operations**: Test insert/delete operations
-3. **Formatting Operations**: Test styling and formatting tools
-4. **Advanced Operations**: Test complex operations like data tables
-5. **Error Scenarios**: Test with invalid inputs and edge cases
+## 🎯 Implementation Priority
+
+### **Phase 1: Core Operations** (Essential)
+- Spreadsheet creation and management
+- Basic sheet operations
+- Data reading and writing
+- Simple formatting
+
+### **Phase 2: Advanced Operations** (Important)
+- Tables and charts
+- Conditional formatting
+- Named ranges and protection
+- Filters and validation
+
+### **Phase 3: Expert Operations** (Advanced)
+- Pivot tables
+- Developer metadata
+- Complex data manipulation
 
 ---
 
-*Last Updated: January 2024*
-*Total Tools: 23* 
+*Comprehensive Planning Phase - January 2024* 

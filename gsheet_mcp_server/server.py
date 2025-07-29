@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -18,7 +18,9 @@ from .handler.add_sheets_handler import add_sheets_handler
 from .handler.delete_sheets_handler import delete_sheets_handler
 from .models import SheetInfo
 from .handler.rename_sheets_handler import rename_sheets_handler
-from .handler.read_sheet_data_handler import read_multiple_ranges, get_sheet_metadata
+from .handler.read_sheet_data_handler import read_multiple_ranges
+from .handler.analyze_sheet_entities_handler import analyze_sheet_entities
+from .handler.create_chart_handler import create_chart
 from .handler.write_cell_handler import write_cell_data
 from .handler.write_row_handler import write_row_data
 from .handler.write_grid_handler import write_grid_data
@@ -34,9 +36,11 @@ from .handler.resize_columns_handler import resize_columns_data
 from .handler.format_cells_handler import format_cells_data
 from .handler.conditional_format_handler import conditional_format_data
 from .handler.merge_cells_handler import merge_cells_data
-from .handler.create_data_table_handler import create_data_table
-from .handler.read_sheet_data_handler import read_multiple_ranges
-
+from .handler.add_table_handler import add_table
+from .handler.delete_table_handler import delete_table
+from .handler.modify_table_rows_handler import modify_table_rows
+from .handler.modify_table_columns_handler import modify_table_columns
+from .handler.add_table_records_handler import add_table_records
 
 # Create an MCP server
 mcp = FastMCP("Google Sheets")
@@ -241,6 +245,33 @@ def read_sheet_data_tool(
         ranges=ranges,
         value_render_option=value_render_option,
         date_time_render_option=date_time_render_option
+    )
+
+
+@mcp.tool()
+def analyze_sheet_entities_tool(
+    spreadsheet_name: str = Field(..., description="The name of the spreadsheet"),
+    sheet_name: str = Field(..., description="Name of the sheet to analyze")
+) -> Dict[str, Any]:
+    """
+    Analyze a sheet for core data entities: tables, charts, and scattered cells.
+    
+    This tool provides focused analysis of:
+    - Data tables and their structure
+    - Charts and their configurations  
+    - Scattered cells (independent cells not part of tables)
+    
+    Examples:
+    - sheet_name='Sheet1'
+    """
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    return analyze_sheet_entities(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        sheet_name=sheet_name
     )
 
 
@@ -575,45 +606,332 @@ def resize_columns(
     )
 
 
+
+
+
 @mcp.tool()
-def create_data_table_tool(
+def create_chart_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="Name of the sheet to create table in"),
-    headers: List[str] = Field(..., description="List of header strings for the table"),
-    data: List[List[str]] = Field(..., description="2D list of data rows (each row is a list of values)"),
-    table_style: str = Field(default="default", description="Table style: 'default', 'striped', or 'bordered'")
+    sheet_name: str = Field(..., description="Name of the sheet to create chart in"),
+    chart_type: str = Field(..., description="Type of chart: BAR, LINE, PIE, SCATTER, etc."),
+    chart_title: str = Field(..., description="Title for the chart"),
+    chart_legend: str = Field(..., description="Position of legend: TOP, BOTTOM, LEFT, RIGHT, NONE"),
+    chart_position: str = Field(..., description="Position of chart on the sheet (e.g., 'A1')"),
+    x_axis_label: str = Field(..., description="Label for the X-axis"),
+    y_axis_label: str = Field(..., description="Label for the Y-axis"),
+    x_values: List[str] = Field(..., description="List of X-axis values (e.g., ['A1:A10'])"),
+    y_values: List[str] = Field(..., description="List of Y-axis values (e.g., ['B1:B10'])"),
+    data_range: str = Field(..., description="Range of data to plot (e.g., 'A1:B10')")
 ) -> Dict[str, Any]:
     """
-    Create a formatted data table in Google Sheets with professional styling.
+    Create a chart in a Google Spreadsheet.
     
-    Features:
-    - Writes headers and data to the specified sheet
-    - Auto-resizes columns to fit content
-    - Formats header row with bold text and dark background
-    - Adds borders around the entire table
-    - Center-aligns all data cells
-    - Optional striped rows for better readability
+    This tool allows you to create various types of charts (Bar, Line, Pie, Scatter, etc.)
+    with customizable options like title, legend, position, and data ranges.
     
+    Args:
+        spreadsheet_name: Name of the spreadsheet to create the chart in
+        sheet_name: Name of the sheet to create the chart in
+        chart_type: Type of chart (e.g., 'BAR', 'LINE', 'PIE', 'SCATTER')
+        chart_title: Title for the chart
+        chart_legend: Position of legend (e.g., 'TOP', 'BOTTOM', 'LEFT', 'RIGHT', 'NONE')
+        chart_position: Position of chart on the sheet (e.g., 'A1')
+        x_axis_label: Label for the X-axis
+        y_axis_label: Label for the Y-axis
+        x_values: List of ranges for X-axis data (e.g., ['A1:A10'])
+        y_values: List of ranges for Y-axis data (e.g., ['B1:B10'])
+        data_range: Range of data to plot (e.g., 'A1:B10')
+    
+    Returns:
+        Dict containing chart information and ID
+        
     Examples:
-    - Basic table: headers=['Name', 'Email', 'Phone'], data=[['John', 'john@email.com', '123-456-7890'], ['Jane', 'jane@email.com', '098-765-4321']]
-    - Striped table: table_style='striped' for alternating row colors
-    - Large dataset: data=[[...]] with many rows of data
+        - Create a bar chart: chart_type='BAR', chart_title='Sales Report', chart_legend='TOP', chart_position='A1', x_axis_label='Month', y_axis_label='Sales', x_values=['A1:A12'], y_values=['B1:B12'], data_range='A1:B12'
+        - Create a line chart: chart_type='LINE', chart_title='Temperature', chart_legend='NONE', chart_position='A1', x_axis_label='Date', y_axis_label='Temperature', x_values=['A1:A30'], y_values=['B1:B30'], data_range='A1:B30'
+        - Create a pie chart: chart_type='PIE', chart_title='Product Sales', chart_legend='BOTTOM', chart_position='A1', x_axis_label='Product', y_axis_label='Sales', x_values=['A1:A5'], y_values=['B1:B5'], data_range='A1:B5'
     
-    Returns table information including range, dimensions, and styling applied.
+    Note: The chart will be created in the specified sheet and position.
     """
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
-    return create_data_table(
+    return create_chart(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
         sheet_name=sheet_name,
-        headers=headers,
-        data=data,
-        table_style=table_style
+        chart_type=chart_type,
+        chart_title=chart_title,
+        chart_legend=chart_legend,
+        chart_position=chart_position,
+        x_axis_label=x_axis_label,
+        y_axis_label=y_axis_label,
+        x_values=x_values,
+        y_values=y_values,
+        data_range=data_range
     )
 
+
+@mcp.tool()
+def add_table_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="Name of the sheet to create table in"),
+    table_name: str = Field(..., description="Unique name for the table"),
+    table_range: str = Field(..., description="Table range (e.g., 'A1:C10')"),
+    headers: List[str] = Field(..., description="List of column headers"),
+    data: List[List[str]] = Field(..., description="2D list of data rows"),
+    column_types: List[str] = Field(..., description="Column types: DOUBLE, CURRENCY, DATE, TEXT, etc.")
+) -> Dict[str, Any]:
+    """
+    Create a native Google Sheets table using AddTableRequest.
+    
+    This creates a proper table object with:
+    - Table ID and name for future reference
+    - Column properties and data types
+    - Professional styling with header and alternating row colors
+    - Data validation capabilities
+    
+    Supported column types:
+    - DOUBLE: Number columns
+    - CURRENCY: Currency columns
+    - DATE: Date columns
+    - TEXT: Text columns
+    - BOOLEAN: Boolean columns
+    - PERCENT: Percentage columns
+    - DROPDOWN: Dropdown with validation rules
+    
+    Examples:
+    - Basic table: table_name='SalesData', table_range='A1:C10', headers=['Name', 'Amount', 'Date']
+    - Typed columns: column_types=['TEXT', 'CURRENCY', 'DATE']
+    - Dropdown column: column_types=['TEXT', 'DROPDOWN', 'DATE']
+    
+    Returns table information including table ID for future operations.
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    return add_table(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        sheet_name=sheet_name,
+        table_name=table_name,
+        table_range=table_range,
+        headers=headers,
+        data=data,
+        column_types=column_types
+    )
+
+
+@mcp.tool()
+def delete_table_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="Name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to delete")
+) -> Dict[str, Any]:
+    """
+    Delete a native Google Sheets table using DeleteTableRequest.
+    
+    This tool completely removes the table object and all its data from the sheet.
+    The table structure, formatting, validation rules, and data will be permanently deleted.
+    
+    ⚠️ WARNING: This action is irreversible. All table data will be lost.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet containing the table
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to delete
+    
+    Returns:
+        Dict containing deletion results with table information
+        
+    Examples:
+        - Delete a table: table_name="SalesData"
+        - Remove unwanted table: table_name="OldInventory"
+    
+    Note: The table will be found by name, so you don't need to know the table ID.
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    return delete_table(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        sheet_name=sheet_name,
+        table_name=table_name
+    )
+
+
+@mcp.tool()
+def add_table_records_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="Name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to add records to"),
+    data: List[List[Union[str, int, float, bool]]] = Field(..., description="2D list of data rows to add (supports strings, numbers, booleans)"),
+    operation: str = Field(default="APPEND", description="Operation type: APPEND or INSERT"),
+    position: int = Field(default=None, description="Position to insert data (0-based, required for INSERT operation)"),
+    append_position: str = Field(default="END", description="Where to append: START or END (for APPEND operation)")
+) -> Dict[str, Any]:
+    """
+    Add records to a native Google Sheets table.
+    
+    This tool can either:
+    - APPEND: Add new data rows to the end/start of an existing table
+    - INSERT: Insert new data rows at a specific position within the table
+    
+    The tool automatically detects data types:
+    - Numbers (int/float) → numberValue
+    - Booleans → boolValue  
+    - Strings → stringValue
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet containing the table
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to add records to
+        data: 2D list of data rows to add (supports mixed types)
+        operation: Operation type ("APPEND" or "INSERT")
+        position: Position to insert data (0-based, required for INSERT)
+        append_position: Where to append (START or END, for APPEND operation)
+    
+    Returns:
+        Dict containing operation results with table information
+        
+    Examples:
+        # Append to end (default)
+        - Mixed data types: data=[["John", 100, True], ["Jane", 200.5, False]]
+        - String data: data=[["Product A", "Category 1"], ["Product B", "Category 2"]]
+        - Append to start: operation="APPEND", append_position="START"
+        
+        # Insert at specific position
+        - Insert at position 2: operation="INSERT", position=2, data=[["New Row", 150]]
+        - Insert at position 0: operation="INSERT", position=0, data=[["First Row", 50]]
+        - Insert multiple rows: operation="INSERT", position=3, data=[["Row 1", 100], ["Row 2", 200]]
+    
+    Note: The table will be found by name, so you don't need to know the table ID.
+    Data types are automatically detected and preserved in the table.
+    For INSERT operations, existing data is shifted down to make room for new rows.
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    return add_table_records(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        sheet_name=sheet_name,
+        table_name=table_name,
+        data=data,
+        operation=operation,
+        position=position,
+        append_position=append_position
+    )
+
+
+@mcp.tool()
+def modify_table_rows_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="Name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to modify rows in"),
+    operation: str = Field(..., description="Operation to perform: INSERT or DELETE"),
+    position: int = Field(..., description="Position where to insert/delete rows (0-based)"),
+    count: int = Field(..., description="Number of rows to insert/delete")
+) -> Dict[str, Any]:
+    """
+    Insert or delete rows within a native Google Sheets table using InsertDimensionRequest/DeleteDimensionRequest.
+    
+    This tool can either insert empty rows (shifting existing data down) or delete rows (shifting existing data up).
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet containing the table
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to modify rows in
+        operation: Operation to perform ("INSERT" or "DELETE")
+        position: Position where to insert/delete rows (0-based)
+        count: Number of rows to insert/delete
+    
+    Returns:
+        Dict containing operation results with table information
+        
+    Examples:
+        - Insert 2 rows at position 2: operation="INSERT", position=2, count=2
+        - Delete 1 row at position 5: operation="DELETE", position=5, count=1
+        - Insert 3 rows at position 0: operation="INSERT", position=0, count=3
+    
+    Note: The table will be found by name, so you don't need to know the table ID.
+    The inserted rows will be empty and can be populated with data afterward.
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    return modify_table_rows(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        sheet_name=sheet_name,
+        table_name=table_name,
+        operation=operation,
+        position=position,
+        count=count
+    )
+
+
+@mcp.tool()
+def modify_table_columns_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="Name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to modify columns in"),
+    operation: str = Field(..., description="Operation to perform: INSERT or DELETE"),
+    position: int = Field(..., description="Position where to insert/delete columns (0-based)"),
+    count: int = Field(..., description="Number of columns to insert/delete")
+) -> Dict[str, Any]:
+    """
+    Insert or delete columns within a native Google Sheets table using InsertDimensionRequest/DeleteDimensionRequest.
+    
+    This tool can either insert empty columns (shifting existing data right) or delete columns (shifting existing data left).
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet containing the table
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to modify columns in
+        operation: Operation to perform ("INSERT" or "DELETE")
+        position: Position where to insert/delete columns (0-based)
+        count: Number of columns to insert/delete
+    
+    Returns:
+        Dict containing operation results with table information
+        
+    Examples:
+        - Insert 2 columns at position 1: operation="INSERT", position=1, count=2
+        - Delete 1 column at position 0: operation="DELETE", position=0, count=1
+        - Insert 3 columns at position 2: operation="INSERT", position=2, count=3
+    
+    Note: The table will be found by name, so you don't need to know the table ID.
+    The inserted columns will be empty and can be populated with data afterward.
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    return modify_table_columns(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        sheet_name=sheet_name,
+        table_name=table_name,
+        operation=operation,
+        position=position,
+        count=count
+    )
 
 
 if __name__ == "__main__":
