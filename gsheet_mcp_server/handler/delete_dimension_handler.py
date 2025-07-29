@@ -3,36 +3,41 @@ from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
 
-class DeleteRowsRequest(BaseModel):
-    """Request model for deleting rows."""
+class DeleteDimensionRequest(BaseModel):
+    """Request model for deleting rows or columns."""
     spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     sheet_name: str = Field(..., description="The name of the sheet")
-    row_indices: List[int] = Field(..., description="List of row indices to delete (0-based)")
+    dimension: str = Field(..., description="Dimension to delete: 'ROWS' or 'COLUMNS'")
+    indices: List[int] = Field(..., description="List of row/column indices to delete (0-based)")
 
-class DeleteRowsResponse(BaseModel):
-    """Response model for deleting rows."""
+class DeleteDimensionResponse(BaseModel):
+    """Response model for deleting rows or columns."""
     spreadsheet_name: str
     sheet_name: str
     sheet_id: int
-    deleted_rows: List[int]
-    rows_deleted: int
+    deleted_indices: List[int]
+    items_deleted: int
+    dimension: str
     message: str
 
-def delete_rows_data(
+def delete_dimension(
     drive_service,
     sheets_service,
     spreadsheet_name: str,
     sheet_name: str,
-    row_indices: List[int]
+    dimension: str,
+    indices: List[int]
 ) -> Dict[str, Any]:
     """
-    Delete specific rows from a Google Sheet.
+    Delete specific rows or columns from a Google Sheet.
     
     Args:
+        drive_service: Google Drive API service
         sheets_service: Google Sheets API service
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet
-        row_indices: List of row indices to delete (0-based)
+        dimension: Dimension to delete ('ROWS' or 'COLUMNS')
+        indices: List of row/column indices to delete (0-based)
     
     Returns:
         Dict containing delete operation results
@@ -45,10 +50,16 @@ def delete_rows_data(
             "message": "No sheet name provided."
         }
     
-    if not row_indices:
+    if not indices:
         return {
             "success": False,
-            "message": "No row indices provided."
+            "message": "No indices provided."
+        }
+    
+    if dimension not in ['ROWS', 'COLUMNS']:
+        return {
+            "success": False,
+            "message": "Dimension must be 'ROWS' or 'COLUMNS'."
         }
     
     # Get spreadsheet ID
@@ -71,18 +82,18 @@ def delete_rows_data(
     
     try:
         # Sort indices in descending order to avoid shifting issues
-        sorted_indices = sorted(row_indices, reverse=True)
+        sorted_indices = sorted(indices, reverse=True)
         
         # Prepare batch update requests
         requests = []
-        for row_index in sorted_indices:
+        for index in sorted_indices:
             request = {
                 'deleteDimension': {
                     'range': {
                         'sheetId': sheet_id,
-                        'dimension': 'ROWS',
-                        'startIndex': row_index,
-                        'endIndex': row_index + 1
+                        'dimension': dimension,
+                        'startIndex': index,
+                        'endIndex': index + 1
                     }
                 }
             }
@@ -97,20 +108,20 @@ def delete_rows_data(
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheet_name": sheet_name,
-            "deleted_rows": row_indices,
-            "rows_deleted": len(row_indices),
-            "message": f"Successfully deleted {len(row_indices)} rows from sheet '{sheet_name}'"
+            "sheet_id": sheet_id,
+            "deleted_indices": indices,
+            "items_deleted": len(indices),
+            "dimension": dimension,
+            "message": f"Successfully deleted {len(indices)} {dimension.lower()} from sheet '{sheet_name}'."
         }
         
     except HttpError as error:
-        error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details else {}
-        error_message = error_details.get('message', str(error))
         return {
             "success": False,
-            "message": f"Error deleting rows: {error_message}"
+            "message": f"Error deleting {dimension.lower()}: {error}"
         }
     except Exception as error:
         return {
             "success": False,
-            "message": f"Unexpected error deleting rows: {error}"
+            "message": f"Unexpected error: {error}"
         } 

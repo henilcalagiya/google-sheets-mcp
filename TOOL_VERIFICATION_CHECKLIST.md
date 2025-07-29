@@ -41,7 +41,7 @@
 - [x] **DeleteTableRequest** - Remove tables
 - [x] **AppendCellsRequest** - Add cells to tables (with tableId)
 - [x] **InsertRangeRequest** - Insert ranges within tables
-- [ ] **DeleteRangeRequest** - Remove ranges from tables
+- [x] **DeleteRangeRequest** - Remove ranges from tables
 - [ ] **UpdateTableColumnRequest** - Modify table column properties
 
 ### **Currently Implemented Table Tools**

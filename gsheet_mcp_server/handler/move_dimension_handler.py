@@ -3,44 +3,49 @@ from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
 
-class MoveRowsRequest(BaseModel):
-    """Request model for moving rows."""
+class MoveDimensionRequest(BaseModel):
+    """Request model for moving rows or columns."""
     spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     sheet_name: str = Field(..., description="The name of the sheet")
-    source_start_index: int = Field(..., description="Starting row index to move (0-based)")
-    source_end_index: int = Field(..., description="Ending row index to move (0-based, exclusive)")
-    destination_index: int = Field(..., description="Destination row index (0-based)")
+    dimension: str = Field(..., description="Dimension to move: 'ROWS' or 'COLUMNS'")
+    source_start_index: int = Field(..., description="Starting index to move (0-based)")
+    source_end_index: int = Field(..., description="Ending index to move (0-based, exclusive)")
+    destination_index: int = Field(..., description="Destination index (0-based)")
 
-class MoveRowsResponse(BaseModel):
-    """Response model for moving rows."""
+class MoveDimensionResponse(BaseModel):
+    """Response model for moving rows or columns."""
     spreadsheet_name: str
     sheet_name: str
     sheet_id: int
+    dimension: str
     source_start_index: int
     source_end_index: int
     destination_index: int
-    rows_moved: int
+    items_moved: int
     message: str
 
-def move_rows_data(
+def move_dimension(
     drive_service,
     sheets_service,
     spreadsheet_name: str,
     sheet_name: str,
+    dimension: str,
     source_start_index: int,
     source_end_index: int,
     destination_index: int
 ) -> Dict[str, Any]:
     """
-    Move rows in a Google Sheet.
+    Move rows or columns in a Google Sheet.
     
     Args:
+        drive_service: Google Drive API service
         sheets_service: Google Sheets API service
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet
-        source_start_index: Starting row index to move (0-based)
-        source_end_index: Ending row index to move (0-based, exclusive)
-        destination_index: Destination row index (0-based)
+        dimension: Dimension to move ('ROWS' or 'COLUMNS')
+        source_start_index: Starting index to move (0-based)
+        source_end_index: Ending index to move (0-based, exclusive)
+        destination_index: Destination index (0-based)
     
     Returns:
         Dict containing move operation results
@@ -51,6 +56,18 @@ def move_rows_data(
         return {
             "success": False,
             "message": "No sheet name provided."
+        }
+    
+    if dimension not in ['ROWS', 'COLUMNS']:
+        return {
+            "success": False,
+            "message": "Dimension must be 'ROWS' or 'COLUMNS'."
+        }
+    
+    if source_start_index >= source_end_index:
+        return {
+            "success": False,
+            "message": "Source start index must be less than source end index."
         }
     
     # Get spreadsheet ID
@@ -72,15 +89,15 @@ def move_rows_data(
         }
     
     try:
-        # Calculate number of rows to move
-        num_rows = source_end_index - source_start_index
+        # Calculate number of items to move
+        num_items = source_end_index - source_start_index
         
         # Prepare the batch update request
         request = {
             'moveDimension': {
                 'source': {
                     'sheetId': sheet_id,
-                    'dimension': 'ROWS',
+                    'dimension': dimension,
                     'startIndex': source_start_index,
                     'endIndex': source_end_index
                 },
@@ -97,22 +114,22 @@ def move_rows_data(
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheet_name": sheet_name,
+            "sheet_id": sheet_id,
+            "dimension": dimension,
             "source_start_index": source_start_index,
             "source_end_index": source_end_index,
             "destination_index": destination_index,
-            "rows_moved": num_rows,
-            "message": f"Successfully moved {num_rows} rows from {source_start_index} to {destination_index} in sheet '{sheet_name}'"
+            "items_moved": num_items,
+            "message": f"Successfully moved {num_items} {dimension.lower()} from position {source_start_index}-{source_end_index} to position {destination_index} in sheet '{sheet_name}'."
         }
         
     except HttpError as error:
-        error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details else {}
-        error_message = error_details.get('message', str(error))
         return {
             "success": False,
-            "message": f"Error moving rows: {error_message}"
+            "message": f"Error moving {dimension.lower()}: {error}"
         }
     except Exception as error:
         return {
             "success": False,
-            "message": f"Unexpected error moving rows: {error}"
+            "message": f"Unexpected error: {error}"
         } 

@@ -16,22 +16,17 @@ from .handler.rename_spreadsheet_handler import rename_spreadsheet_handler
 from .handler.list_sheets_handler import list_sheets_handler
 from .handler.add_sheets_handler import add_sheets_handler
 from .handler.delete_sheets_handler import delete_sheets_handler
+from .handler.duplicate_sheet_handler import duplicate_sheet_handler
 from .models import SheetInfo
 from .handler.rename_sheets_handler import rename_sheets_handler
 from .handler.read_sheet_data_handler import read_multiple_ranges
-from .handler.analyze_sheet_entities_handler import analyze_sheet_entities
 from .handler.create_chart_handler import create_chart
-from .handler.write_cell_handler import write_cell_data
-from .handler.write_row_handler import write_row_data
-from .handler.write_grid_handler import write_grid_data
-from .handler.append_data_handler import append_data_to_column
-from .handler.clear_range_handler import clear_range_data
+from .handler.get_sheet_structures_handler import get_sheet_structures
+
 from .handler.find_replace_handler import find_replace_text
-from .handler.insert_rows_handler import insert_rows_data
-from .handler.delete_rows_handler import delete_rows_data
-from .handler.insert_columns_handler import insert_columns_data
-from .handler.delete_columns_handler import delete_columns_data
-from .handler.move_rows_handler import move_rows_data
+from .handler.insert_dimension_handler import insert_dimension_handler
+from .handler.delete_dimension_handler import delete_dimension
+from .handler.move_dimension_handler import move_dimension
 from .handler.resize_columns_handler import resize_columns_data
 from .handler.format_cells_handler import format_cells_data
 from .handler.conditional_format_handler import conditional_format_data
@@ -188,6 +183,29 @@ def delete_sheets_tool(
     )
 
 
+@mcp.tool()
+def duplicate_sheet_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    source_sheet_name: str = Field(..., description="Name of the sheet to duplicate"),
+    new_sheet_name: str = Field(default=None, description="Name for the duplicated sheet (optional, will auto-generate if not provided)"),
+    insert_position: int = Field(default=None, description="Position to insert the duplicated sheet (0-based index, optional - will insert at end if not specified)")
+) -> Dict[str, Any]:
+    """Duplicate a sheet within a spreadsheet.
+    
+    Creates a copy of an existing sheet within the same spreadsheet.
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    return duplicate_sheet_handler(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        source_sheet_name=source_sheet_name,
+        new_sheet_name=new_sheet_name,
+        insert_position=insert_position
+    )
 
 
 @mcp.tool()
@@ -249,25 +267,28 @@ def read_sheet_data_tool(
 
 
 @mcp.tool()
-def analyze_sheet_entities_tool(
-    spreadsheet_name: str = Field(..., description="The name of the spreadsheet"),
-    sheet_name: str = Field(..., description="Name of the sheet to analyze")
+def get_sheet_structures_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet")
 ) -> Dict[str, Any]:
     """
-    Analyze a sheet for core data entities: tables, charts, and scattered cells.
+    Get all structures found in a Google Sheet.
     
-    This tool provides focused analysis of:
-    - Data tables and their structure
-    - Charts and their configurations  
-    - Scattered cells (independent cells not part of tables)
+    This tool discovers and categorizes different types of structures
+    in a sheet, including tables, charts, named ranges, pivot tables,
+    filter views, protected ranges, and developer metadata.
     
     Examples:
-    - sheet_name='Sheet1'
+    - Get structures in main data sheet: sheet_name="Data"
+    - Get structures in summary sheet: sheet_name="Summary"
+    - Get structures in chart sheet: sheet_name="Charts"
     """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
-    return analyze_sheet_entities(
+    return get_sheet_structures(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
@@ -275,129 +296,19 @@ def analyze_sheet_entities_tool(
     )
 
 
-@mcp.tool()
-def write_cell(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    cell: str = Field(..., description="Cell reference (e.g., 'Sheet1!A1', 'Sheet2!B5')"),
-    value: str = Field(..., description="Value to write to the cell")
-) -> Dict[str, Any]:
-    """
-    Write a single value to a specific cell in Google Sheets.
-    
-    Examples:
-    - Write text: cell='Sheet1!A1', value='Hello World'
-    - Write formula: cell='Sheet1!A1', value='=SUM(B1:B10)'
-    - Write number: cell='Sheet1!B1', value='42'
-    """
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return write_cell_data(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        cell=cell,
-        value=value
-    )
 
 
-@mcp.tool()
-def write_row(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    row_range: str = Field(..., description="Row range (e.g., 'Sheet1!A1:E1', 'Sheet1!1:1')"),
-    values: List[str] = Field(..., description="List of values to write to the row")
-) -> Dict[str, Any]:
-    """
-    Write values to a single row in Google Sheets.
-    
-    Examples:
-    - Write headers: row_range='Sheet1!A1:E1', values=['Name', 'Email', 'Phone', 'Age', 'City']
-    - Write data row: row_range='Sheet1!A2:E2', values=['John', 'john@email.com', '123-456-7890', '30', 'New York']
-    """
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return write_row_data(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        row_range=row_range,
-        values=values
-    )
 
 
-@mcp.tool()
-def write_grid(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    grid_range: str = Field(..., description="Grid range (e.g., 'Sheet1!A1:C5', 'Sheet1!A1:Z100')"),
-    values: List[List[str]] = Field(..., description="2D array of values to write to the grid")
-) -> Dict[str, Any]:
-    """
-    Write a 2D grid of values to a range in Google Sheets.
-    
-    Examples:
-    - Write table: grid_range='Sheet1!A1:C3', values=[['Name', 'Email', 'Phone'], ['John', 'john@email.com', '123'], ['Jane', 'jane@email.com', '456']]
-    - Write large grid: grid_range='Sheet1!A1:Z100', values=[[...]] (100 rows of 26 columns each)
-    """
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return write_grid_data(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        grid_range=grid_range,
-        values=values
-    )
 
 
-@mcp.tool()
-def append_data(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    column_range: str = Field(..., description="Column range to append to (e.g., 'Sheet1!A:A', 'Sheet1!B:B')"),
-    values: List[str] = Field(..., description="List of values to append to the column")
-) -> Dict[str, Any]:
-    """
-    Append values to the end of a column in Google Sheets.
-    
-    Examples:
-    - Append names: column_range='Sheet1!A:A', values=['Alice', 'Bob', 'Charlie']
-    - Append emails: column_range='Sheet1!B:B', values=['alice@email.com', 'bob@email.com', 'charlie@email.com']
-    """
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return append_data_to_column(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        column_range=column_range,
-        values=values
-    )
 
 
-@mcp.tool()
-def clear_range(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    range_to_clear: str = Field(..., description="Range to clear (e.g., 'Sheet1!A1:B10', 'Sheet1!A:A')")
-) -> Dict[str, Any]:
-    """
-    Clear all values from a range in Google Sheets (keeps formatting).
-    
-    Examples:
-    - Clear cells: range_to_clear='Sheet1!A1:B10'
-    - Clear column: range_to_clear='Sheet1!A:A'
-    - Clear row: range_to_clear='Sheet1!1:1'
-    """
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return clear_range_data(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        range=range_to_clear
-    )
+
+
+
+
+
 
 
 @mcp.tool()
@@ -429,147 +340,103 @@ def find_replace(
 
 
 @mcp.tool()
-def insert_rows(
+def insert_sheet_dimension(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet"),
-    start_index: int = Field(..., description="Starting row index (0-based)"),
-    end_index: int = Field(..., description="Ending row index (0-based, exclusive)")
+    dimension: str = Field(..., description="Dimension to insert: 'ROWS' or 'COLUMNS'"),
+    position: int = Field(..., description="Position to insert at (0-based)"),
+    count: int = Field(..., description="Number of rows/columns to insert")
 ) -> Dict[str, Any]:
     """
-    Insert rows in a Google Sheet.
+    Insert rows or columns in a Google Sheet.
     
     Examples:
-    - Insert 1 row: sheet_name="Sheet1", start_index=5, end_index=6
-    - Insert 3 rows: sheet_name="Data", start_index=10, end_index=13
-    - Insert at beginning: sheet_name="Summary", start_index=0, end_index=1
+    - Insert 1 row: dimension="ROWS", position=5, count=1
+    - Insert 3 columns: dimension="COLUMNS", position=2, count=3
+    - Insert at beginning: dimension="ROWS", position=0, count=1
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
-    return insert_rows_data(
+    return insert_dimension_handler(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
         sheet_name=sheet_name,
-        start_index=start_index,
-        end_index=end_index
+        dimension=dimension,
+        position=position,
+        count=count
     )
 
 
 @mcp.tool()
-def delete_rows(
+def delete_sheet_dimension(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet"),
-    row_indices: List[int] = Field(..., description="List of row indices to delete (0-based)")
+    dimension: str = Field(..., description="Dimension to delete: 'ROWS' or 'COLUMNS'"),
+    indices: List[int] = Field(..., description="List of row/column indices to delete (0-based)")
 ) -> Dict[str, Any]:
     """
-    Delete entire rows from a Google Sheet.
+    Delete specific rows or columns from a Google Sheet.
     
     Examples:
-    - Delete single row: sheet_name="Sheet1", row_indices=[5]
-    - Delete multiple rows: sheet_name="Data", row_indices=[1, 3, 5]
-    - Delete first row: sheet_name="Summary", row_indices=[0]
+    - Delete rows 5, 7, 10: dimension="ROWS", indices=[5, 7, 10]
+    - Delete columns 2, 4, 6: dimension="COLUMNS", indices=[2, 4, 6]
+    - Delete single row: dimension="ROWS", indices=[3]
+    - Delete single column: dimension="COLUMNS", indices=[1]
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
-    return delete_rows_data(
+    return delete_dimension(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
         sheet_name=sheet_name,
-        row_indices=row_indices
+        dimension=dimension,
+        indices=indices
     )
 
 
+
+
+
+
+
+
 @mcp.tool()
-def insert_columns(
+def move_sheet_dimension(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet"),
-    start_index: int = Field(..., description="Starting column index (0-based)"),
-    end_index: int = Field(..., description="Ending column index (0-based, exclusive)")
+    dimension: str = Field(..., description="Dimension to move: 'ROWS' or 'COLUMNS'"),
+    source_start_index: int = Field(..., description="Starting index to move (0-based)"),
+    source_end_index: int = Field(..., description="Ending index to move (0-based, exclusive)"),
+    destination_index: int = Field(..., description="Destination index (0-based)")
 ) -> Dict[str, Any]:
     """
-    Insert columns in a Google Sheet.
+    Move rows or columns in a Google Sheet.
     
     Examples:
-    - Insert 1 column: sheet_name="Sheet1", start_index=2, end_index=3
-    - Insert 3 columns: sheet_name="Data", start_index=5, end_index=8
-    - Insert at beginning: sheet_name="Summary", start_index=0, end_index=1
+    - Move rows 5-8 to position 10: dimension="ROWS", source_start_index=5, source_end_index=8, destination_index=10
+    - Move columns 2-5 to position 0: dimension="COLUMNS", source_start_index=2, source_end_index=5, destination_index=0
+    - Move single row: dimension="ROWS", source_start_index=3, source_end_index=4, destination_index=7
+    - Move single column: dimension="COLUMNS", source_start_index=1, source_end_index=2, destination_index=5
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
-    return insert_columns_data(
+    return move_dimension(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
         sheet_name=sheet_name,
-        start_index=start_index,
-        end_index=end_index
-    )
-
-
-@mcp.tool()
-def delete_columns(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet"),
-    column_indices: List[int] = Field(..., description="List of column indices to delete (0-based)")
-) -> Dict[str, Any]:
-    """
-    Delete entire columns from a Google Sheet.
-    
-    Examples:
-    - Delete single column: sheet_name="Sheet1", column_indices=[2]
-    - Delete multiple columns: sheet_name="Data", column_indices=[1, 3, 5]
-    - Delete first column: sheet_name="Summary", column_indices=[0]
-    """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return delete_columns_data(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        column_indices=column_indices
-    )
-
-
-@mcp.tool()
-def move_rows(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet"),
-    source_start_index: int = Field(..., description="Starting row index to move (0-based)"),
-    source_end_index: int = Field(..., description="Ending row index to move (0-based, exclusive)"),
-    destination_index: int = Field(..., description="Destination row index (0-based)")
-) -> Dict[str, Any]:
-    """
-    Move rows in a Google Sheet.
-    
-    Examples:
-    - Move 1 row: sheet_name="Sheet1", source_start_index=5, source_end_index=6, destination_index=10
-    - Move 3 rows: sheet_name="Data", source_start_index=10, source_end_index=13, destination_index=0
-    - Move to end: sheet_name="Summary", source_start_index=2, source_end_index=5, destination_index=20
-    """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return move_rows_data(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
+        dimension=dimension,
         source_start_index=source_start_index,
         source_end_index=source_end_index,
         destination_index=destination_index
