@@ -1,6 +1,7 @@
 from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 def insert_dimension(
     sheets_service, 
@@ -54,51 +55,51 @@ def insert_dimension_handler(
     dimension: str,
     position: int,
     count: int
-) -> Dict[str, Any]:
+) -> str:
     """Handler to insert rows or columns in a sheet."""
     
     # Validate input
     if not sheet_name:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "No sheet name provided."
-        }
+        })
     
     if dimension not in ['ROWS', 'COLUMNS']:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "Dimension must be 'ROWS' or 'COLUMNS'."
-        }
+        })
     
     if position < 0:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "Position must be >= 0."
-        }
+        })
     
     if count <= 0:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "Count must be > 0."
-        }
+        })
     
     # Get spreadsheet ID
     spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     if not spreadsheet_id:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Spreadsheet '{spreadsheet_name}' not found."
-        }
+        })
     
     # Get sheet ID from sheet name
     sheet_id_map = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [sheet_name])
     sheet_id = sheet_id_map.get(sheet_name)
     
     if sheet_id is None:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'."
-        }
+        })
     
     try:
         # Insert the dimension
@@ -107,7 +108,7 @@ def insert_dimension_handler(
         dimension_name = dimension.lower()
         dimension_plural = f"{dimension_name}s" if dimension == 'ROWS' else f"{dimension_name}s"
         
-        return {
+        return compact_json_response({
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheet_name": sheet_name,
@@ -116,10 +117,10 @@ def insert_dimension_handler(
             "count": count,
             "dimensions_inserted": count,
             "message": f"Successfully inserted {count} {dimension_name}(s) at position {position} in sheet '{sheet_name}'"
-        }
+        })
         
     except Exception as e:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Error inserting {dimension.lower()}: {str(e)}"
-        } 
+        }) 

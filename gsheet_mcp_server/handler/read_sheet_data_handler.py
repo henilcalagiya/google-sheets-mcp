@@ -2,6 +2,7 @@ from typing import List, Dict, Any, Optional, Union
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 class ReadSheetRequest(BaseModel):
     """Request model for reading sheet data."""
@@ -143,3 +144,21 @@ def get_sheet_metadata(
         raise RuntimeError(f"Error getting sheet metadata: {error_message}")
     except Exception as error:
         raise RuntimeError(f"Unexpected error getting sheet metadata: {error}")
+
+def read_sheet_data_handler(
+    drive_service,
+    sheets_service,
+    spreadsheet_name: str,
+    ranges: List[str],
+    value_render_option: str = "FORMATTED_VALUE",
+    date_time_render_option: str = "FORMATTED_STRING"
+) -> str:
+    result = read_multiple_ranges(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name,
+        ranges=ranges,
+        value_render_option=value_render_option,
+        date_time_render_option=date_time_render_option
+    )
+    return compact_json_response(result)

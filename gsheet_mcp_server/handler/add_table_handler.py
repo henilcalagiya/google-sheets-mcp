@@ -8,6 +8,7 @@ from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from googleapiclient.errors import HttpError
 from ..helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from ..helper.json_utils import compact_json_response
 
 
 class AddTableRequest(BaseModel):
@@ -31,7 +32,7 @@ def add_table(
     headers: List[str],
     data: List[List[str]] = None,
     column_types: List[str] = None
-) -> Dict[str, Any]:
+) -> str:
     """
     Create a native Google Sheets table using AddTableRequest.
     
@@ -53,7 +54,7 @@ def add_table(
         column_types: Column types (DOUBLE, CURRENCY, DATE, TEXT, etc.) (optional)
     
     Returns:
-        Dict containing table creation results
+        Compact JSON string containing table creation results
         
     Raises:
         RuntimeError: If table creation fails
@@ -62,20 +63,29 @@ def add_table(
         # Get spreadsheet ID
         spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
         if not spreadsheet_id:
-            raise RuntimeError(f"Spreadsheet '{spreadsheet_name}' not found")
+            return compact_json_response({
+                "success": False,
+                "message": f"Spreadsheet '{spreadsheet_name}' not found"
+            })
         
         # Get sheet ID
         sheet_ids = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [sheet_name])
         sheet_id = sheet_ids.get(sheet_name)
         if sheet_id is None:
-            raise RuntimeError(f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'")
+            return compact_json_response({
+                "success": False,
+                "message": f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'"
+            })
         
         # Parse the table range to get start and end positions
         # Expected format: 'A1:C10' or similar
         import re
         range_match = re.match(r'([A-Z]+)(\d+):([A-Z]+)(\d+)', table_range)
         if not range_match:
-            raise RuntimeError(f"Invalid table range format: {table_range}. Expected format: 'A1:C10'")
+            return compact_json_response({
+                "success": False,
+                "message": f"Invalid table range format: {table_range}. Expected format: 'A1:C10'"
+            })
         
         start_col_letter, start_row_str, end_col_letter, end_row_str = range_match.groups()
         
@@ -196,7 +206,7 @@ def add_table(
                         body=validation_body
                     ).execute()
             
-            return {
+            return compact_json_response({
                 "success": True,
                 "spreadsheet_name": spreadsheet_name,
                 "sheet_name": sheet_name,
@@ -208,16 +218,25 @@ def add_table(
                 "column_count": len(headers),
                 "column_types": column_types if column_types else None,
                 "message": f"Successfully created table '{table_name}' with {len(data) if data else 0} rows and {len(headers)} columns (range: {start_col_letter}{start_row_str}:{chr(ord('A') + start_col_index + len(headers) - 1)}{end_row_str})"
-            }
+            })
         else:
-            raise RuntimeError("No response received from table creation request")
+            return compact_json_response({
+                "success": False,
+                "message": "No response received from table creation request"
+            })
         
     except HttpError as error:
         error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details and len(error.error_details) > 0 else {}
         error_message = error_details.get('message', str(error)) if isinstance(error_details, dict) else str(error)
-        raise RuntimeError(f"Error creating table: {error_message}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Error creating table: {error_message}"
+        })
     except Exception as error:
-        raise RuntimeError(f"Unexpected error creating table: {error}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Unexpected error creating table: {error}"
+        })
 
 
 def get_table_info(

@@ -1,5 +1,6 @@
 from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 def list_spreadsheets(drive_service, max_results: int = 10) -> List[Dict[str, Any]]:
     """List all spreadsheets accessible to the user."""
@@ -27,11 +28,11 @@ def list_all_spreadsheets_handler(
     drive_service,
     sheets_service,
     max_results: int = 10
-) -> Dict[str, Any]:
+) -> str:
     """Handler to list all spreadsheets accessible to the user."""
     spreadsheets = list_spreadsheets(drive_service, max_results)
-    return {
+    return compact_json_response({
         "spreadsheets": spreadsheets,
         "total_spreadsheets": len(spreadsheets),
         "message": f"Successfully listed {len(spreadsheets)} spreadsheets."
-    } 
+    }) 

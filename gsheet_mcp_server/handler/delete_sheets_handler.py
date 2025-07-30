@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
 from gsheet_mcp_server.models import SheetInfo
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 def delete_sheets(sheets_service, spreadsheet_id: str, sheet_ids: List[int]) -> List[int]:
     requests = [
@@ -23,23 +24,23 @@ def delete_sheets_handler(
     sheets_service,
     spreadsheet_name: str,
     sheet_names: List[str]
-) -> Dict[str, Any]:
+) -> str:
     """Handler to delete sheets from a spreadsheet by their names."""
     
     # Validate input
     if not sheet_names:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "No sheet names provided."
-        }
+        })
     
     # Get spreadsheet ID
     spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     if not spreadsheet_id:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Spreadsheet '{spreadsheet_name}' not found."
-        }
+        })
     
     # Get sheet IDs from sheet names
     sheet_id_map = get_sheet_ids_by_names(sheets_service, spreadsheet_id, sheet_names)
@@ -57,25 +58,25 @@ def delete_sheets_handler(
             print(f"Warning: Sheet '{sheet_name}' not found, skipping.")
     
     if not existing_sheet_ids:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "No valid sheets found to delete."
-        }
+        })
     
     try:
         # Delete the sheets
         deleted_ids = delete_sheets(sheets_service, spreadsheet_id, existing_sheet_ids)
         
-        return {
+        return compact_json_response({
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "deleted_sheet_names": existing_sheet_names,
             "sheets_deleted": len(deleted_ids),
             "message": f"Successfully deleted {len(deleted_ids)} sheet(s) from '{spreadsheet_name}'"
-        }
+        })
         
     except Exception as e:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Error deleting sheets: {str(e)}"
-        } 
+        }) 

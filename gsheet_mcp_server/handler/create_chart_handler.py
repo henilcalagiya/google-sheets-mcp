@@ -2,6 +2,7 @@ from typing import Dict, Any, List, Optional
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 
 class CreateChartRequest(BaseModel):
@@ -36,7 +37,7 @@ def create_chart(
     title: str = "",
     position: Dict[str, Any] = None,
     series_names: List[str] = None
-) -> Dict[str, Any]:
+) -> str:
     """
     Create a chart in Google Sheets with specified type and configuration.
     
@@ -61,7 +62,7 @@ def create_chart(
         series_names: Names for data series (optional)
     
     Returns:
-        Dict containing chart creation results
+        Compact JSON string containing chart creation results
         
     Raises:
         RuntimeError: If chart creation fails
@@ -73,7 +74,10 @@ def create_chart(
         # Validate chart type
         valid_chart_types = ['BAR', 'COLUMN', 'LINE', 'PIE', 'SCATTER', 'AREA', 'COMBO']
         if chart_type.upper() not in valid_chart_types:
-            raise RuntimeError(f"Invalid chart type. Must be one of: {valid_chart_types}")
+            return compact_json_response({
+                "success": False,
+                "message": f"Invalid chart type. Must be one of: {valid_chart_types}"
+            })
         
         # Default position if not provided
         if position is None:
@@ -119,7 +123,8 @@ def create_chart(
         if 'replies' in response and response['replies']:
             chart_id = response['replies'][0].get('addChart', {}).get('chart', {}).get('chartId')
         
-        return {
+        return compact_json_response({
+            "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheet_name": sheet_name,
             "chart_id": chart_id,
@@ -128,14 +133,20 @@ def create_chart(
             "title": title,
             "position": position,
             "message": f"Successfully created {chart_type.lower()} chart with title '{title}' using data range '{data_range}'"
-        }
+        })
         
     except HttpError as error:
         error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details else {}
         error_message = error_details.get('message', str(error))
-        raise RuntimeError(f"Error creating chart: {error_message}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Error creating chart: {error_message}"
+        })
     except Exception as error:
-        raise RuntimeError(f"Unexpected error creating chart: {error}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Unexpected error creating chart: {error}"
+        })
 
 
 def _create_chart_specification(

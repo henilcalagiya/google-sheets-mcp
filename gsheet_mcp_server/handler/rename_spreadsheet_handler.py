@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from googleapiclient.errors import HttpError
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 def rename_spreadsheet(sheets_service, spreadsheet_id: str, new_title: str) -> str:
     """Rename a spreadsheet by its ID."""
@@ -27,25 +28,25 @@ def rename_spreadsheet_handler(
     sheets_service,
     spreadsheet_name: str,
     new_title: str
-) -> Dict[str, Any]:
+) -> str:
     """Handler to rename a spreadsheet by name."""
     spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     if not spreadsheet_id:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Spreadsheet '{spreadsheet_name}' not found."
-        }
+        })
     
     try:
         rename_spreadsheet(sheets_service, spreadsheet_id, new_title)
-        return {
+        return compact_json_response({
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "new_title": new_title,
             "message": f"Successfully renamed spreadsheet '{spreadsheet_name}' to '{new_title}'"
-        }
+        })
     except Exception as e:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Error renaming spreadsheet: {str(e)}"
-        } 
+        }) 

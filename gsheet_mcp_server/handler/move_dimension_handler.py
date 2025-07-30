@@ -2,6 +2,7 @@ from typing import Dict, Any
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 class MoveDimensionRequest(BaseModel):
     """Request model for moving rows or columns."""
@@ -33,7 +34,7 @@ def move_dimension(
     source_start_index: int,
     source_end_index: int,
     destination_index: int
-) -> Dict[str, Any]:
+) -> str:
     """
     Move rows or columns in a Google Sheet.
     
@@ -48,45 +49,45 @@ def move_dimension(
         destination_index: Destination index (0-based)
     
     Returns:
-        Dict containing move operation results
+        Compact JSON string containing move operation results
     """
     
     # Validate input
     if not sheet_name:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "No sheet name provided."
-        }
+        })
     
     if dimension not in ['ROWS', 'COLUMNS']:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "Dimension must be 'ROWS' or 'COLUMNS'."
-        }
+        })
     
     if source_start_index >= source_end_index:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "Source start index must be less than source end index."
-        }
+        })
     
     # Get spreadsheet ID
     spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     if not spreadsheet_id:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Spreadsheet '{spreadsheet_name}' not found."
-        }
+        })
     
     # Get sheet ID from sheet name
     sheet_id_map = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [sheet_name])
     sheet_id = sheet_id_map.get(sheet_name)
     
     if sheet_id is None:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'."
-        }
+        })
     
     try:
         # Calculate number of items to move
@@ -110,7 +111,7 @@ def move_dimension(
             body={'requests': [request]}
         ).execute()
         
-        return {
+        return compact_json_response({
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheet_name": sheet_name,
@@ -121,15 +122,15 @@ def move_dimension(
             "destination_index": destination_index,
             "items_moved": num_items,
             "message": f"Successfully moved {num_items} {dimension.lower()} from position {source_start_index}-{source_end_index} to position {destination_index} in sheet '{sheet_name}'."
-        }
+        })
         
     except HttpError as error:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Error moving {dimension.lower()}: {error}"
-        }
+        })
     except Exception as error:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Unexpected error: {error}"
-        } 
+        }) 

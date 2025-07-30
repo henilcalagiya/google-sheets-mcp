@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 class DeleteDimensionRequest(BaseModel):
     """Request model for deleting rows or columns."""
@@ -27,7 +28,7 @@ def delete_dimension(
     sheet_name: str,
     dimension: str,
     indices: List[int]
-) -> Dict[str, Any]:
+) -> str:
     """
     Delete specific rows or columns from a Google Sheet.
     
@@ -40,45 +41,45 @@ def delete_dimension(
         indices: List of row/column indices to delete (0-based)
     
     Returns:
-        Dict containing delete operation results
+        Compact JSON string containing delete operation results
     """
     
     # Validate input
     if not sheet_name:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "No sheet name provided."
-        }
+        })
     
     if not indices:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "No indices provided."
-        }
+        })
     
     if dimension not in ['ROWS', 'COLUMNS']:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "Dimension must be 'ROWS' or 'COLUMNS'."
-        }
+        })
     
     # Get spreadsheet ID
     spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     if not spreadsheet_id:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Spreadsheet '{spreadsheet_name}' not found."
-        }
+        })
     
     # Get sheet ID from sheet name
     sheet_id_map = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [sheet_name])
     sheet_id = sheet_id_map.get(sheet_name)
     
     if sheet_id is None:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'."
-        }
+        })
     
     try:
         # Sort indices in descending order to avoid shifting issues
@@ -104,7 +105,7 @@ def delete_dimension(
             body={'requests': requests}
         ).execute()
         
-        return {
+        return compact_json_response({
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheet_name": sheet_name,
@@ -113,15 +114,15 @@ def delete_dimension(
             "items_deleted": len(indices),
             "dimension": dimension,
             "message": f"Successfully deleted {len(indices)} {dimension.lower()} from sheet '{sheet_name}'."
-        }
+        })
         
     except HttpError as error:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Error deleting {dimension.lower()}: {error}"
-        }
+        })
     except Exception as error:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Unexpected error: {error}"
-        } 
+        }) 

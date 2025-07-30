@@ -8,6 +8,7 @@ from typing import Dict, Any
 from pydantic import BaseModel, Field
 from googleapiclient.errors import HttpError
 from ..helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from ..helper.json_utils import compact_json_response
 
 
 class DeleteTableRequest(BaseModel):
@@ -23,7 +24,7 @@ def delete_table(
     spreadsheet_name: str,
     sheet_name: str,
     table_name: str
-) -> Dict[str, Any]:
+) -> str:
     """
     Delete a native Google Sheets table using DeleteTableRequest.
     
@@ -40,7 +41,7 @@ def delete_table(
         table_name: Name of the table to delete
     
     Returns:
-        Dict containing deletion results with table information
+        Compact JSON string containing deletion results with table information
         
     Raises:
         RuntimeError: If table deletion fails
@@ -49,17 +50,26 @@ def delete_table(
         # Get spreadsheet ID
         spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
         if not spreadsheet_id:
-            raise RuntimeError(f"Spreadsheet '{spreadsheet_name}' not found")
+            return compact_json_response({
+                "success": False,
+                "message": f"Spreadsheet '{spreadsheet_name}' not found"
+            })
         
         # Get sheet ID
         sheet_id = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [sheet_name])[sheet_name]
         if sheet_id is None:
-            raise RuntimeError(f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'")
+            return compact_json_response({
+                "success": False,
+                "message": f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'"
+            })
         
         # Get table ID from table name
         table_id = get_table_id_by_name(sheets_service, spreadsheet_id, sheet_name, table_name)
         if table_id is None:
-            raise RuntimeError(f"Table '{table_name}' not found in sheet '{sheet_name}'")
+            return compact_json_response({
+                "success": False,
+                "message": f"Table '{table_name}' not found in sheet '{sheet_name}'"
+            })
         
         # Create delete request for table
         request_body = {
@@ -82,23 +92,32 @@ def delete_table(
         if 'replies' in response and response['replies']:
             deleted_table = response['replies'][0].get('deleteTable', {}).get('table', {})
             
-            return {
+            return compact_json_response({
                 "success": True,
                 "spreadsheet_name": spreadsheet_name,
                 "sheet_name": sheet_name,
                 "table_name": table_name,
                 "table_id": table_id,
                 "message": f"Successfully deleted table '{table_name}' from sheet '{sheet_name}'"
-            }
+            })
         else:
-            raise RuntimeError("No response received from table deletion request")
+            return compact_json_response({
+                "success": False,
+                "message": "No response received from table deletion request"
+            })
         
     except HttpError as error:
         error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details else {}
         error_message = error_details.get('message', str(error))
-        raise RuntimeError(f"Error deleting table: {error_message}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Error deleting table: {error_message}"
+        })
     except Exception as error:
-        raise RuntimeError(f"Unexpected error deleting table: {error}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Unexpected error deleting table: {error}"
+        })
 
 
 def get_table_id_by_name(

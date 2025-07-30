@@ -2,6 +2,7 @@ from typing import Dict, Any
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 class MergeCellsRequest(BaseModel):
     """Request model for merging cells."""
@@ -32,7 +33,7 @@ def merge_cells_data(
     start_column_index: int,
     end_column_index: int,
     merge_type: str = "MERGE_ALL"
-) -> Dict[str, Any]:
+) -> str:
     """
     Merge cells in a Google Sheet.
     
@@ -47,14 +48,17 @@ def merge_cells_data(
         merge_type: Type of merge operation
     
     Returns:
-        Dict containing merge operation results
+        Compact JSON string containing merge operation results
     """
     spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
         # Validate merge type
         valid_merge_types = ["MERGE_ALL", "MERGE_COLUMNS", "MERGE_ROWS"]
         if merge_type not in valid_merge_types:
-            raise ValueError(f"Invalid merge type. Must be one of: {valid_merge_types}")
+            return compact_json_response({
+                "success": False,
+                "message": f"Invalid merge type. Must be one of: {valid_merge_types}"
+            })
         
         # Prepare the batch update request
         request = {
@@ -75,18 +79,25 @@ def merge_cells_data(
             body={'requests': [request]}
         ).execute()
         
-        return {
+        return compact_json_response({
+            "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
             "merge_type": merge_type,
             "range": f"Rows {start_row_index}-{end_row_index-1}, Columns {start_column_index}-{end_column_index-1}",
             "cells_merged": (end_row_index - start_row_index) * (end_column_index - start_column_index),
             "message": f"Successfully merged cells in range {start_row_index}:{end_row_index-1}, {start_column_index}:{end_column_index-1}"
-        }
+        })
         
     except HttpError as error:
         error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details else {}
         error_message = error_details.get('message', str(error))
-        raise RuntimeError(f"Error merging cells: {error_message}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Error merging cells: {error_message}"
+        })
     except Exception as error:
-        raise RuntimeError(f"Unexpected error merging cells: {error}") 
+        return compact_json_response({
+            "success": False,
+            "message": f"Unexpected error merging cells: {error}"
+        }) 

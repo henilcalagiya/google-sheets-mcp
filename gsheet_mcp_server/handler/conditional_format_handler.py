@@ -2,6 +2,7 @@ from typing import Dict, Any, List, Optional
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 class ConditionalFormatRequest(BaseModel):
     """Request model for conditional formatting."""
@@ -42,7 +43,7 @@ def conditional_format_data(
     text_color: Optional[Dict[str, float]] = None,
     bold: Optional[bool] = None,
     italic: Optional[bool] = None
-) -> Dict[str, Any]:
+) -> str:
     """
     Apply conditional formatting to cells in a Google Sheet.
     
@@ -62,7 +63,7 @@ def conditional_format_data(
         italic: Whether text is italic
     
     Returns:
-        Dict containing conditional format operation results
+        Compact JSON string containing conditional format operation results
     """
     spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
@@ -115,18 +116,24 @@ def conditional_format_data(
         ).execute()
         
         range_str = f"Rows {start_row_index}-{end_row_index-1}, Columns {start_column_index}-{end_column_index-1}"
-        return {
+        return compact_json_response({
             "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
             "range": range_str,
             "condition_type": rule_type,
             "format_applied": True,
             "message": f"Successfully applied conditional formatting to {range_str}"
-        }
+        })
         
     except HttpError as error:
         error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details else {}
         error_message = error_details.get('message', str(error))
-        raise RuntimeError(f"Error applying conditional formatting: {error_message}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Error applying conditional formatting: {error_message}"
+        })
     except Exception as error:
-        raise RuntimeError(f"Unexpected error applying conditional formatting: {error}") 
+        return compact_json_response({
+            "success": False,
+            "message": f"Unexpected error applying conditional formatting: {error}"
+        }) 

@@ -2,6 +2,7 @@ from typing import Dict, Any, List, Optional
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 class FormatCellsRequest(BaseModel):
     """Request model for formatting cells."""
@@ -49,7 +50,7 @@ def format_cells_data(
     horizontal_alignment: Optional[str] = None,
     vertical_alignment: Optional[str] = None,
     borders: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+) -> str:
     """
     Format cells in a Google Sheet with various styling options.
     
@@ -73,7 +74,7 @@ def format_cells_data(
         borders: Border styling
     
     Returns:
-        Dict containing format operation results
+        Compact JSON string containing format operation results
     """
     spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     try:
@@ -130,17 +131,23 @@ def format_cells_data(
         range_str = f"Rows {start_row_index}-{end_row_index-1}, Columns {start_column_index}-{end_column_index-1}"
         format_type = "cell"
         
-        return {
+        return compact_json_response({
             "spreadsheet_name": spreadsheet_name,
             "sheet_id": sheet_id,
             "range": range_str,
             "format_applied": format_type,
             "message": f"Successfully applied {format_type} formatting to {range_str}"
-        }
+        })
         
     except HttpError as error:
         error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details else {}
         error_message = error_details.get('message', str(error))
-        raise RuntimeError(f"Error formatting cells: {error_message}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Error formatting cells: {error_message}"
+        })
     except Exception as error:
-        raise RuntimeError(f"Unexpected error formatting cells: {error}") 
+        return compact_json_response({
+            "success": False,
+            "message": f"Unexpected error formatting cells: {error}"
+        }) 

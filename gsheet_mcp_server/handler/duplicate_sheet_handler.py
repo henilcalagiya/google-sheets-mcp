@@ -1,6 +1,7 @@
 from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 def duplicate_sheet(sheets_service, spreadsheet_id: str, source_sheet_id: int, new_sheet_name: str = None, insert_position: int = None) -> Dict[str, Any]:
     """Duplicate a sheet within the same spreadsheet."""
@@ -42,33 +43,33 @@ def duplicate_sheet_handler(
     source_sheet_name: str,
     new_sheet_name: str = None,
     insert_position: int = None
-) -> Dict[str, Any]:
+) -> str:
     """Handler to duplicate a sheet by name."""
     
     # Validate input
     if not source_sheet_name:
-        return {
+        return compact_json_response({
             "success": False,
             "message": "Source sheet name is required."
-        }
+        })
     
     # Get spreadsheet ID
     spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     if not spreadsheet_id:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Spreadsheet '{spreadsheet_name}' not found."
-        }
+        })
     
     # Get source sheet ID
     sheet_id_map = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [source_sheet_name])
     source_sheet_id = sheet_id_map.get(source_sheet_name)
     
     if source_sheet_id is None:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Source sheet '{source_sheet_name}' not found in '{spreadsheet_name}'."
-        }
+        })
     
     # Generate new sheet name if not provided
     if not new_sheet_name:
@@ -80,7 +81,7 @@ def duplicate_sheet_handler(
         
         position_info = f" at position {insert_position}" if insert_position is not None else " at the end"
         
-        return {
+        return compact_json_response({
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "source_sheet_name": source_sheet_name,
@@ -89,10 +90,10 @@ def duplicate_sheet_handler(
             "new_sheet_index": result["new_sheet_index"],
             "insert_position": insert_position,
             "message": f"Successfully duplicated sheet '{source_sheet_name}' to '{new_sheet_name}'{position_info} in '{spreadsheet_name}'"
-        }
+        })
         
     except Exception as e:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Error duplicating sheet: {str(e)}"
-        } 
+        }) 

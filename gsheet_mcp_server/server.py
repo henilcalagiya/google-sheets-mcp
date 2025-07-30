@@ -19,7 +19,7 @@ from .handler.delete_sheets_handler import delete_sheets_handler
 from .handler.duplicate_sheet_handler import duplicate_sheet_handler
 from .models import SheetInfo
 from .handler.rename_sheets_handler import rename_sheets_handler
-from .handler.read_sheet_data_handler import read_multiple_ranges
+from .handler.read_sheet_data_handler import read_multiple_ranges, read_sheet_data_handler
 from .handler.create_chart_handler import create_chart
 
 from .handler.get_spreadsheets_overview_handler import get_spreadsheets_overview_handler
@@ -82,22 +82,22 @@ else:
 @mcp.tool()
 def get_all_spreadsheets_overview_tool(
     max_spreadsheets: int = Field(default=10, description="Maximum number of spreadsheets to analyze")
-) -> Dict[str, Any]:
+) -> str:
     """
     Get a comprehensive overview of all spreadsheets with their sheets.
-    
+    Returns compact JSON string for AI host compatibility.
+
     Returns a detailed overview of all accessible spreadsheets, including:
     - List of all spreadsheets with their names and IDs
     - All sheets within each spreadsheet with basic properties
     - Summary statistics across all spreadsheets
-    
+
     This tool provides a bird's-eye view of your entire Google Sheets workspace.
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
     return get_spreadsheets_overview_handler(
         drive_service=drive_service,
         sheets_service=sheets_service,
@@ -109,10 +109,11 @@ def get_all_spreadsheets_overview_tool(
 @mcp.tool()
 def list_all_spreadsheets(
     max_results: int = Field(default=10, description="The maximum number of spreadsheets to return")
-) -> Dict[str, Any]:
+) -> str:
     """List all spreadsheets accessible to the user.
     
     Returns a list of all Google Sheets spreadsheets that the user has access to.
+    Returns compact JSON string for AI host compatibility.
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
@@ -129,15 +130,22 @@ def list_all_spreadsheets(
 def rename_spreadsheet_tool(
     spreadsheet_name: str = Field(..., description="The name of the spreadsheet to rename"),
     new_title: str = Field(..., description="The new title for the spreadsheet")
-) -> Dict[str, Any]:
-    """Rename a specific spreadsheet by its name.
+) -> str:
+    """
+    Rename a Google Spreadsheet.
+    Returns compact JSON string for AI host compatibility.
     
-    Renames a Google Sheets spreadsheet to a new title.
+    This tool changes the title/name of an existing spreadsheet.
+    
+    Examples:
+    - Rename spreadsheet: spreadsheet_name="Old Name", new_title="New Name"
+    - Update title: spreadsheet_name="Data 2023", new_title="Data 2024"
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
     return rename_spreadsheet_handler(
         drive_service=drive_service,
         sheets_service=sheets_service,
@@ -151,10 +159,11 @@ def rename_spreadsheet_tool(
 @mcp.tool()
 def list_sheets_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet")
-) -> Dict[str, Any]:
+) -> str:
     """List all sheets in a Google Spreadsheet.
     
     Returns basic information about all sheets in the specified spreadsheet.
+    Returns compact JSON string for AI host compatibility.
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
@@ -171,10 +180,11 @@ def list_sheets_tool(
 def add_sheets_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_names: List[str] = Field(..., description="List of sheet names to add as new sheets")
-) -> Dict[str, Any]:
+) -> str:
     """Add new sheets to a Google Spreadsheet.
     
     Creates new sheets with the specified names in the spreadsheet.
+    Returns compact JSON string for AI host compatibility.
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
@@ -192,10 +202,11 @@ def add_sheets_tool(
 def delete_sheets_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_names: List[str] = Field(..., description="List of sheet names to delete")
-) -> Dict[str, Any]:
+) -> str:
     """Delete sheets from a Google Spreadsheet.
     
     Removes the specified sheets from the spreadsheet by their names.
+    Returns compact JSON string for AI host compatibility.
     
     Examples:
     - Delete single sheet: sheet_names=["Sheet1"]
@@ -219,10 +230,11 @@ def duplicate_sheet_tool(
     source_sheet_name: str = Field(..., description="Name of the sheet to duplicate"),
     new_sheet_name: str = Field(default=None, description="Name for the duplicated sheet (optional, will auto-generate if not provided)"),
     insert_position: int = Field(default=None, description="Position to insert the duplicated sheet (0-based index, optional - will insert at end if not specified)")
-) -> Dict[str, Any]:
+) -> str:
     """Duplicate a sheet within a spreadsheet.
     
     Creates a copy of an existing sheet within the same spreadsheet.
+    Returns compact JSON string for AI host compatibility.
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
@@ -243,9 +255,10 @@ def rename_sheets_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_names: List[str] = Field(..., description="List of sheet names to rename"),
     new_titles: List[str] = Field(..., description="List of new titles for the sheets")
-) -> Dict[str, Any]:
+) -> str:
     """
     Rename sheets in a Google Spreadsheet.
+    Returns compact JSON string for AI host compatibility.
     
     Renames multiple sheets by their names. The number of sheet names must match the number of new titles.
     
@@ -273,9 +286,10 @@ def read_sheet_data_tool(
     ranges: List[str] = Field(..., description="List of range strings (e.g., ['Sheet1!A1:B10', 'Sheet2!A:A'])"),
     value_render_option: str = Field(default="FORMATTED_VALUE", description="How to render values: FORMATTED_VALUE, UNFORMATTED_VALUE, or FORMULA"),
     date_time_render_option: str = Field(default="FORMATTED_STRING", description="How to render dates: SERIAL_NUMBER or FORMATTED_STRING")
-) -> Dict[str, Any]:
+) -> str:
     """
     Read sheet data with flexible range support - single or multiple ranges in one efficient API call.
+    Returns compact JSON string for AI host compatibility.
     
     Examples:
     - Single column: ['Sheet1!A:A']
@@ -286,7 +300,7 @@ def read_sheet_data_tool(
     """
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return read_multiple_ranges(
+    return read_sheet_data_handler(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
@@ -297,24 +311,6 @@ def read_sheet_data_tool(
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @mcp.tool()
 def find_replace(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
@@ -322,14 +318,21 @@ def find_replace(
     find_text: str = Field(..., description="Text to find"),
     replace_text: str = Field(..., description="Text to replace with"),
     match_case: bool = Field(default=False, description="Whether to match case (default: False)")
-) -> Dict[str, Any]:
+) -> str:
     """
-    Find and replace text in a range in Google Sheets.
+    Find and replace text in a specific range in Google Sheets.
+    Returns compact JSON string for AI host compatibility.
+    
+    This tool searches for specific text within a range and replaces it with new text.
+    It can search across entire columns, specific ranges, or multiple sheets.
     
     Examples:
-    - Replace text: search_range='Sheet1!A:A', find_text='old', replace_text='new'
-    - Case sensitive: search_range='Sheet1!A1:Z100', find_text='OLD', replace_text='NEW', match_case=True
+    - Replace in column: search_range="Sheet1!A:A", find_text="old", replace_text="new"
+    - Replace in range: search_range="Sheet1!A1:Z100", find_text="error", replace_text="fixed"
+    - Case sensitive: match_case=True, find_text="Error", replace_text="Fixed"
     """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
@@ -350,9 +353,10 @@ def insert_sheet_dimension(
     dimension: str = Field(..., description="Dimension to insert: 'ROWS' or 'COLUMNS'"),
     position: int = Field(..., description="Position to insert at (0-based)"),
     count: int = Field(..., description="Number of rows/columns to insert")
-) -> Dict[str, Any]:
+) -> str:
     """
     Insert rows or columns in a Google Sheet.
+    Returns compact JSON string for AI host compatibility.
     
     Examples:
     - Insert 1 row: dimension="ROWS", position=5, count=1
@@ -381,9 +385,10 @@ def delete_sheet_dimension(
     sheet_name: str = Field(..., description="The name of the sheet"),
     dimension: str = Field(..., description="Dimension to delete: 'ROWS' or 'COLUMNS'"),
     indices: List[int] = Field(..., description="List of row/column indices to delete (0-based)")
-) -> Dict[str, Any]:
+) -> str:
     """
     Delete specific rows or columns from a Google Sheet.
+    Returns compact JSON string for AI host compatibility.
     
     Examples:
     - Delete rows 5, 7, 10: dimension="ROWS", indices=[5, 7, 10]
@@ -420,9 +425,10 @@ def move_sheet_dimension(
     source_start_index: int = Field(..., description="Starting index to move (0-based)"),
     source_end_index: int = Field(..., description="Ending index to move (0-based, exclusive)"),
     destination_index: int = Field(..., description="Destination index (0-based)")
-) -> Dict[str, Any]:
+) -> str:
     """
     Move rows or columns in a Google Sheet.
+    Returns compact JSON string for AI host compatibility.
     
     Examples:
     - Move rows 5-8 to position 10: dimension="ROWS", source_start_index=5, source_end_index=8, destination_index=10
@@ -453,14 +459,15 @@ def resize_columns(
     sheet_name: str = Field(..., description="The name of the sheet"),
     column_indices: List[int] = Field(..., description="List of column indices to resize (0-based)"),
     widths: List[int] = Field(..., description="List of widths in pixels for each column")
-) -> Dict[str, Any]:
+) -> str:
     """
     Resize columns in a Google Sheet.
+    Returns compact JSON string for AI host compatibility.
     
     Examples:
-    - Resize 1 column: sheet_name="Sheet1", column_indices=[0], widths=[150]
-    - Resize multiple columns: sheet_name="Data", column_indices=[0, 1, 2], widths=[100, 200, 300]
-    - Make columns wider: sheet_name="Summary", column_indices=[0, 1], widths=[200, 250]
+    - Resize single column: column_indices=[0], widths=[100]
+    - Resize multiple columns: column_indices=[0, 1, 2], widths=[100, 150, 200]
+    - Resize columns with different widths: column_indices=[1, 3, 5], widths=[120, 180, 250]
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
@@ -493,35 +500,27 @@ def create_chart_tool(
     x_values: List[str] = Field(..., description="List of X-axis values (e.g., ['A1:A10'])"),
     y_values: List[str] = Field(..., description="List of Y-axis values (e.g., ['B1:B10'])"),
     data_range: str = Field(..., description="Range of data to plot (e.g., 'A1:B10')")
-) -> Dict[str, Any]:
+) -> str:
     """
     Create a chart in a Google Spreadsheet.
+    Returns compact JSON string for AI host compatibility.
     
     This tool allows you to create various types of charts (Bar, Line, Pie, Scatter, etc.)
     with customizable options like title, legend, position, and data ranges.
     
-    Args:
-        spreadsheet_name: Name of the spreadsheet to create the chart in
-        sheet_name: Name of the sheet to create the chart in
-        chart_type: Type of chart (e.g., 'BAR', 'LINE', 'PIE', 'SCATTER')
-        chart_title: Title for the chart
-        chart_legend: Position of legend (e.g., 'TOP', 'BOTTOM', 'LEFT', 'RIGHT', 'NONE')
-        chart_position: Position of chart on the sheet (e.g., 'A1')
-        x_axis_label: Label for the X-axis
-        y_axis_label: Label for the Y-axis
-        x_values: List of ranges for X-axis data (e.g., ['A1:A10'])
-        y_values: List of ranges for Y-axis data (e.g., ['B1:B10'])
-        data_range: Range of data to plot (e.g., 'A1:B10')
+    Supported chart types:
+    - BAR: Horizontal bar chart
+    - COLUMN: Vertical column chart  
+    - LINE: Line chart
+    - PIE: Pie chart
+    - SCATTER: Scatter plot
+    - AREA: Area chart
+    - COMBO: Combination chart
     
-    Returns:
-        Dict containing chart information and ID
-        
     Examples:
-        - Create a bar chart: chart_type='BAR', chart_title='Sales Report', chart_legend='TOP', chart_position='A1', x_axis_label='Month', y_axis_label='Sales', x_values=['A1:A12'], y_values=['B1:B12'], data_range='A1:B12'
-        - Create a line chart: chart_type='LINE', chart_title='Temperature', chart_legend='NONE', chart_position='A1', x_axis_label='Date', y_axis_label='Temperature', x_values=['A1:A30'], y_values=['B1:B30'], data_range='A1:B30'
-        - Create a pie chart: chart_type='PIE', chart_title='Product Sales', chart_legend='BOTTOM', chart_position='A1', x_axis_label='Product', y_axis_label='Sales', x_values=['A1:A5'], y_values=['B1:B5'], data_range='A1:B5'
-    
-    Note: The chart will be created in the specified sheet and position.
+    - Create bar chart: chart_type="BAR", data_range="A1:B10", chart_title="Sales Report"
+    - Create line chart: chart_type="LINE", data_range="A1:B30", chart_title="Temperature"
+    - Create pie chart: chart_type="PIE", data_range="A1:B5", chart_title="Product Sales"
     """
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
@@ -532,14 +531,10 @@ def create_chart_tool(
         spreadsheet_name=spreadsheet_name,
         sheet_name=sheet_name,
         chart_type=chart_type,
-        chart_title=chart_title,
-        chart_legend=chart_legend,
-        chart_position=chart_position,
-        x_axis_label=x_axis_label,
-        y_axis_label=y_axis_label,
-        x_values=x_values,
-        y_values=y_values,
-        data_range=data_range
+        data_range=data_range,
+        title=chart_title,
+        position=None,
+        series_names=None
     )
 
 
@@ -552,9 +547,10 @@ def add_table_tool(
     headers: List[str] = Field(..., description="List of column headers"),
     data: List[List[str]] = Field(default=[], description="2D list of data rows (optional)"),
     column_types: List[str] = Field(default=None, description="Column types: DOUBLE, CURRENCY, DATE, TEXT, etc. (optional)")
-) -> Dict[str, Any]:
+) -> str:
     """
-    Create a native Google Sheets table using AddTableRequest.
+    Create a native Google Sheets table with professional styling and data validation.
+    Returns compact JSON string for AI host compatibility.
     
     This creates a proper table object with:
     - Table ID and name for future reference
@@ -562,18 +558,10 @@ def add_table_tool(
     - Professional styling with header and alternating row colors
     - Data validation capabilities
     
-    Supported column types:
-    - TEXT/STRING: Text columns (no validation applied)
-    - NUMBER/DOUBLE/INTEGER/CURRENCY: Number columns with positive number validation
-    - DATE: Date columns with date validation (after 1900)
-    - BOOLEAN: Boolean columns (no validation applied)
-    
     Examples:
-    - Basic table: table_name='SalesData', table_range='A1:C10', headers=['Name', 'Amount', 'Date']
-    - Typed columns: column_types=['TEXT', 'CURRENCY', 'DATE']
-    - Dropdown column: column_types=['TEXT', 'DROPDOWN', 'DATE']
-    
-    Returns table information including table ID for future operations.
+    - Create simple table: table_name="Sales", table_range="A1:C10", headers=["Product", "Sales", "Date"]
+    - Create table with data: data=[["Product A", "100", "2024-01-01"], ["Product B", "200", "2024-01-02"]]
+    - Create table with validation: column_types=["TEXT", "CURRENCY", "DATE"]
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
@@ -598,28 +586,19 @@ def delete_table_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="Name of the sheet containing the table"),
     table_name: str = Field(..., description="Name of the table to delete")
-) -> Dict[str, Any]:
+) -> str:
     """
-    Delete a native Google Sheets table using DeleteTableRequest.
+    Delete a native Google Sheets table completely.
+    Returns compact JSON string for AI host compatibility.
     
     This tool completely removes the table object and all its data from the sheet.
     The table structure, formatting, validation rules, and data will be permanently deleted.
     
     ⚠️ WARNING: This action is irreversible. All table data will be lost.
     
-    Args:
-        spreadsheet_name: Name of the spreadsheet containing the table
-        sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to delete
-    
-    Returns:
-        Dict containing deletion results with table information
-        
     Examples:
-        - Delete a table: table_name="SalesData"
-        - Remove unwanted table: table_name="OldInventory"
-    
-    Note: The table will be found by name, so you don't need to know the table ID.
+    - Delete table: table_name="SalesData"
+    - Delete table from specific sheet: sheet_name="Data", table_name="Inventory"
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
@@ -646,45 +625,19 @@ def add_table_records_tool(
     operation: str = Field(default="APPEND", description="Operation type: APPEND or INSERT"),
     position: int = Field(default=None, description="Position to insert data (0-based, required for INSERT operation)"),
     append_position: str = Field(default="END", description="Where to append: START or END (for APPEND operation)")
-) -> Dict[str, Any]:
+) -> str:
     """
     Add records to a native Google Sheets table.
+    Returns compact JSON string for AI host compatibility.
     
-    This tool can either:
-    - APPEND: Add new data rows to the end/start of an existing table
-    - INSERT: Insert new data rows at a specific position within the table
+    This tool adds new data rows to existing tables with support for:
+    - APPEND: Add rows to the end or beginning of the table
+    - INSERT: Insert rows at a specific position within the table
     
-    The tool automatically detects data types:
-    - Numbers (int/float) → numberValue
-    - Booleans → boolValue  
-    - Strings → stringValue
-    
-    Args:
-        spreadsheet_name: Name of the spreadsheet containing the table
-        sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to add records to
-        data: 2D list of data rows to add (supports mixed types)
-        operation: Operation type ("APPEND" or "INSERT")
-        position: Position to insert data (0-based, required for INSERT)
-        append_position: Where to append (START or END, for APPEND operation)
-    
-    Returns:
-        Dict containing operation results with table information
-        
     Examples:
-        # Append to end (default)
-        - Mixed data types: data=[["John", 100, True], ["Jane", 200.5, False]]
-        - String data: data=[["Product A", "Category 1"], ["Product B", "Category 2"]]
-        - Append to start: operation="APPEND", append_position="START"
-        
-        # Insert at specific position
-        - Insert at position 2: operation="INSERT", position=2, data=[["New Row", 150]]
-        - Insert at position 0: operation="INSERT", position=0, data=[["First Row", 50]]
-        - Insert multiple rows: operation="INSERT", position=3, data=[["Row 1", 100], ["Row 2", 200]]
-    
-    Note: The table will be found by name, so you don't need to know the table ID.
-    Data types are automatically detected and preserved in the table.
-    For INSERT operations, existing data is shifted down to make room for new rows.
+    - Append to end: operation="APPEND", append_position="END", data=[["Product A", "100", "2024-01-01"]]
+    - Append to start: operation="APPEND", append_position="START", data=[["Product B", "200", "2024-01-02"]]
+    - Insert at position: operation="INSERT", position=2, data=[["Product C", "300", "2024-01-03"]]
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
@@ -713,34 +666,18 @@ def modify_table_ranges_tool(
     range_to_modify: str = Field(..., description="Range to modify (e.g., 'A1:C5')"),
     shift_direction: str = Field(default="ROWS", description="Shift direction: ROWS or COLUMNS"),
     data: Optional[List[List[Union[str, int, float, bool]]]] = Field(default=None, description="Data to insert (for INSERT operations)")
-) -> Dict[str, Any]:
+) -> str:
     """
-    Modify ranges within a native Google Sheets table using InsertRangeRequest/DeleteRangeRequest.
+    Modify ranges within a native Google Sheets table.
+    Returns compact JSON string for AI host compatibility.
     
-    This unified tool can either insert or delete ranges of cells and shift existing data accordingly.
+    This tool can insert or delete ranges of cells and shift existing data accordingly.
     It's more precise than dimension-based operations as it works with specific ranges.
     
-    Args:
-        spreadsheet_name: Name of the spreadsheet containing the table
-        sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to modify ranges in
-        operation: Operation to perform ("INSERT" or "DELETE")
-        range_to_modify: Range to modify (e.g., 'A1:C5')
-        shift_direction: Shift direction ("ROWS" or "COLUMNS")
-        data: Optional data to insert (for INSERT operations)
-    
-    Returns:
-        Dict containing operation results with table information
-        
     Examples:
-        - Insert range A1:C5: operation="INSERT", range_to_modify="A1:C5", shift_direction="ROWS"
-        - Delete range B2:D4: operation="DELETE", range_to_modify="B2:D4", shift_direction="COLUMNS"
-        - Insert range with data: operation="INSERT", range_to_modify="A1:C3", data=[["John", 100], ["Jane", 200]]
-        - Delete single cell: operation="DELETE", range_to_modify="A1:A1", shift_direction="ROWS"
-    
-    Note: The table will be found by name, so you don't need to know the table ID.
-    For INSERT operations, the range will be empty unless data is provided.
-    For DELETE operations, the range will be removed and remaining data will be shifted.
+    - Insert range: operation="INSERT", range_to_modify="A3:C5", data=[["New", "Data", "Here"]]
+    - Delete range: operation="DELETE", range_to_modify="A3:C5"
+    - Insert with column shift: operation="INSERT", range_to_modify="B2:D4", shift_direction="COLUMNS"
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")

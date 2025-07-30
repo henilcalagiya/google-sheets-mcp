@@ -8,6 +8,7 @@ from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from googleapiclient.errors import HttpError
 from ..helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from ..helper.json_utils import compact_json_response
 
 
 class AddTableRecordsRequest(BaseModel):
@@ -31,7 +32,7 @@ def add_table_records(
     operation: str = "APPEND",
     position: int = None,
     append_position: str = "END"
-) -> Dict[str, Any]:
+) -> str:
     """
     Add records to a native Google Sheets table using a simplified, unified approach.
     
@@ -54,7 +55,7 @@ def add_table_records(
         append_position: Where to append (START or END, for APPEND operation)
     
     Returns:
-        Dict containing operation results with table information
+        Compact JSON string containing operation results with table information
         
     Raises:
         RuntimeError: If table operation fails
@@ -62,29 +63,47 @@ def add_table_records(
     try:
         # Validate operation and parameters
         if operation not in ["APPEND", "INSERT"]:
-            raise RuntimeError("Operation must be 'APPEND' or 'INSERT'")
+            return compact_json_response({
+                "success": False,
+                "message": "Operation must be 'APPEND' or 'INSERT'"
+            })
         
         if operation == "INSERT" and position is None:
-            raise RuntimeError("Position is required for INSERT operation")
+            return compact_json_response({
+                "success": False,
+                "message": "Position is required for INSERT operation"
+            })
         
         if operation == "INSERT" and position < 0:
-            raise RuntimeError("Position must be >= 0 for INSERT operation")
+            return compact_json_response({
+                "success": False,
+                "message": "Position must be >= 0 for INSERT operation"
+            })
         
         # Get spreadsheet ID
         spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
         if not spreadsheet_id:
-            raise RuntimeError(f"Spreadsheet '{spreadsheet_name}' not found")
+            return compact_json_response({
+                "success": False,
+                "message": f"Spreadsheet '{spreadsheet_name}' not found"
+            })
         
         # Get sheet ID
         sheet_ids = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [sheet_name])
         sheet_id = sheet_ids.get(sheet_name)
         if sheet_id is None:
-            raise RuntimeError(f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'")
+            return compact_json_response({
+                "success": False,
+                "message": f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'"
+            })
         
         # Get table ID from table name
         table_id = get_table_id_by_name(sheets_service, spreadsheet_id, sheet_name, table_name)
         if table_id is None:
-            raise RuntimeError(f"Table '{table_name}' not found in sheet '{sheet_name}'")
+            return compact_json_response({
+                "success": False,
+                "message": f"Table '{table_name}' not found in sheet '{sheet_name}'"
+            })
         
         # Get current table information
         table_info = get_table_info(sheets_service, spreadsheet_id, table_id)
@@ -222,7 +241,7 @@ def add_table_records(
         operation_text = "appended" if operation == "APPEND" else "inserted"
         position_text = f" at position {position}" if operation == "INSERT" else f" to {append_position.lower()}"
         
-        return {
+        return compact_json_response({
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheet_name": sheet_name,
@@ -235,14 +254,20 @@ def add_table_records(
             "new_row_count": new_row_count,
             "target_range": f"{sheet_name}!A{target_start_row + 1}:Z{target_start_row + len(values)}",
             "message": f"Successfully {operation_text} {len(values)} rows{position_text} in table '{table_name}'"
-        }
+        })
         
     except HttpError as error:
         error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details and len(error.error_details) > 0 else {}
         error_message = error_details.get('message', str(error)) if isinstance(error_details, dict) else str(error)
-        raise RuntimeError(f"Error operating on table cells: {error_message}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Error operating on table cells: {error_message}"
+        })
     except Exception as error:
-        raise RuntimeError(f"Unexpected error operating on table cells: {error}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Unexpected error operating on table cells: {error}"
+        })
 
 
 def get_table_id_by_name(

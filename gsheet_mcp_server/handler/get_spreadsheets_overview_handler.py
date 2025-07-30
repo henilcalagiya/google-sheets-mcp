@@ -3,6 +3,7 @@ from googleapiclient.errors import HttpError
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 from gsheet_mcp_server.handler.list_spreadsheets_handler import list_spreadsheets
 from gsheet_mcp_server.handler.list_sheets_handler import list_sheets
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 
 
@@ -87,12 +88,13 @@ def get_spreadsheets_overview_handler(
     drive_service,
     sheets_service,
     max_spreadsheets: int = 10
-) -> Dict[str, Any]:
+) -> str:
     """
     Handler for getting comprehensive overview of all spreadsheets.
     """
-    return get_spreadsheet_overview(
+    overview = get_spreadsheet_overview(
         drive_service=drive_service,
         sheets_service=sheets_service,
         max_spreadsheets=max_spreadsheets
-    ) 
+    )
+    return compact_json_response(overview) 

@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 from googleapiclient.errors import HttpError
 from ..helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from ..helper.json_utils import compact_json_response
 
 
 class ModifyTableRangesRequest(BaseModel):
@@ -31,7 +32,7 @@ def modify_table_ranges(
     range_to_modify: str,
     shift_direction: str = "ROWS",
     data: Optional[List[List[str]]] = None
-) -> Dict[str, Any]:
+) -> str:
     """
     Modify ranges within a native Google Sheets table using InsertRangeRequest/DeleteRangeRequest.
     
@@ -50,7 +51,7 @@ def modify_table_ranges(
         data: Optional data to insert (for INSERT operations)
     
     Returns:
-        Dict containing operation results with table information
+        Compact JSON string containing operation results with table information
         
     Raises:
         RuntimeError: If range modification fails
@@ -58,42 +59,66 @@ def modify_table_ranges(
     try:
         # Validate operation
         if operation not in ["INSERT", "DELETE"]:
-            raise RuntimeError("Operation must be 'INSERT' or 'DELETE'")
+            return compact_json_response({
+                "success": False,
+                "message": "Operation must be 'INSERT' or 'DELETE'"
+            })
         
         # Validate shift direction
         if shift_direction not in ["ROWS", "COLUMNS"]:
-            raise RuntimeError("Shift direction must be 'ROWS' or 'COLUMNS'")
+            return compact_json_response({
+                "success": False,
+                "message": "Shift direction must be 'ROWS' or 'COLUMNS'"
+            })
         
         # Get spreadsheet ID
         spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
         if not spreadsheet_id:
-            raise RuntimeError(f"Spreadsheet '{spreadsheet_name}' not found")
+            return compact_json_response({
+                "success": False,
+                "message": f"Spreadsheet '{spreadsheet_name}' not found"
+            })
         
         # Get sheet ID
         sheet_ids = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [sheet_name])
         sheet_id = sheet_ids.get(sheet_name)
         if sheet_id is None:
-            raise RuntimeError(f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'")
+            return compact_json_response({
+                "success": False,
+                "message": f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'"
+            })
         
         # Get table ID and info
         table_id = get_table_id_by_name(sheets_service, spreadsheet_id, sheet_name, table_name)
         if not table_id:
-            raise RuntimeError(f"Table '{table_name}' not found in sheet '{sheet_name}'")
+            return compact_json_response({
+                "success": False,
+                "message": f"Table '{table_name}' not found in sheet '{sheet_name}'"
+            })
         
         # Get table info for validation
         table_info = get_table_info(sheets_service, spreadsheet_id, table_id)
         if not table_info:
-            raise RuntimeError(f"Could not retrieve table information for '{table_name}'")
+            return compact_json_response({
+                "success": False,
+                "message": f"Could not retrieve table information for '{table_name}'"
+            })
         
         # Parse range to get start and end coordinates
         start_row, start_col, end_row, end_col = parse_range(range_to_modify)
         
         # Validate range is within reasonable bounds
         if start_row < 0 or start_col < 0 or end_row < 0 or end_col < 0:
-            raise RuntimeError(f"Invalid range coordinates: start_row={start_row}, start_col={start_col}, end_row={end_row}, end_col={end_col}")
+            return compact_json_response({
+                "success": False,
+                "message": f"Invalid range coordinates: start_row={start_row}, start_col={start_col}, end_row={end_row}, end_col={end_col}"
+            })
         
         if start_row >= end_row or start_col >= end_col:
-            raise RuntimeError(f"Invalid range: start must be before end. Got: {range_to_modify}")
+            return compact_json_response({
+                "success": False,
+                "message": f"Invalid range: start must be before end. Got: {range_to_modify}"
+            })
         
         print(f"DEBUG: Parsed range '{range_to_modify}' -> start_row={start_row}, start_col={start_col}, end_row={end_row}, end_col={end_col}")
         print(f"DEBUG: Table info: {table_info}")
@@ -157,7 +182,7 @@ def modify_table_ranges(
         
         operation_text = "inserted" if operation == "INSERT" else "deleted"
         
-        return {
+        return compact_json_response({
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheet_name": sheet_name,
@@ -169,14 +194,20 @@ def modify_table_ranges(
             "data_inserted": bool(data) if operation == "INSERT" else False,
             "updated_table_info": updated_table_info,
             "message": f"Successfully {operation_text} range '{range_to_modify}' in table '{table_name}' with {shift_direction} shift"
-        }
+        })
         
     except HttpError as error:
         error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details and len(error.error_details) > 0 else {}
         error_message = error_details.get('message', str(error)) if isinstance(error_details, dict) else str(error)
-        raise RuntimeError(f"Error modifying table ranges: {error_message}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Error modifying table ranges: {error_message}"
+        })
     except Exception as error:
-        raise RuntimeError(f"Unexpected error modifying table ranges: {error}")
+        return compact_json_response({
+            "success": False,
+            "message": f"Unexpected error modifying table ranges: {error}"
+        })
 
 
 def parse_range(range_str: str) -> tuple:

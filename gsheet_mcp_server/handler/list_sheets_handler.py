@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
 from gsheet_mcp_server.models import SheetInfo
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 def list_sheets(sheets_service, spreadsheet_id: str) -> List[SheetInfo]:
     try:
@@ -30,14 +31,14 @@ def list_sheets_handler(
     drive_service,
     sheets_service,
     spreadsheet_name: str
-) -> Dict[str, Any]:
+) -> str:
     """Handler to list all sheets in a spreadsheet."""
     spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
     if not spreadsheet_id:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Spreadsheet '{spreadsheet_name}' not found."
-        }
+        })
     
     try:
         sheet_infos = list_sheets(sheets_service, spreadsheet_id)
@@ -51,15 +52,15 @@ def list_sheets_handler(
                 "grid_properties": sheet.grid_properties
             })
         
-        return {
+        return compact_json_response({
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheets": sheets_data,
             "total_sheets": len(sheet_infos),
             "message": f"Successfully listed {len(sheet_infos)} sheets in '{spreadsheet_name}'"
-        }
+        })
     except Exception as e:
-        return {
+        return compact_json_response({
             "success": False,
             "message": f"Error listing sheets: {str(e)}"
-        } 
+        }) 
