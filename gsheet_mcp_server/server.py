@@ -37,6 +37,7 @@ from .handler.modify_table_rows_handler import modify_table_rows
 from .handler.modify_table_columns_handler import modify_table_columns
 from .handler.add_table_records_handler import add_table_records
 
+
 # Create an MCP server
 mcp = FastMCP("Google Sheets")
 
@@ -544,10 +545,10 @@ def add_table_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="Name of the sheet to create table in"),
     table_name: str = Field(..., description="Unique name for the table"),
-    table_range: str = Field(..., description="Table range (e.g., 'A1:C10')"),
+    table_range: str = Field(..., description="Table range (e.g., 'A1:C10'). The actual table will include all columns based on the number of headers, regardless of the range end column."),
     headers: List[str] = Field(..., description="List of column headers"),
-    data: List[List[str]] = Field(..., description="2D list of data rows"),
-    column_types: List[str] = Field(..., description="Column types: DOUBLE, CURRENCY, DATE, TEXT, etc.")
+    data: List[List[str]] = Field(default=[], description="2D list of data rows (optional)"),
+    column_types: List[str] = Field(default=None, description="Column types: DOUBLE, CURRENCY, DATE, TEXT, etc. (optional)")
 ) -> Dict[str, Any]:
     """
     Create a native Google Sheets table using AddTableRequest.
@@ -559,13 +560,10 @@ def add_table_tool(
     - Data validation capabilities
     
     Supported column types:
-    - DOUBLE: Number columns
-    - CURRENCY: Currency columns
-    - DATE: Date columns
-    - TEXT: Text columns
-    - BOOLEAN: Boolean columns
-    - PERCENT: Percentage columns
-    - DROPDOWN: Dropdown with validation rules
+    - TEXT/STRING: Text columns (no validation applied)
+    - NUMBER/DOUBLE/INTEGER/CURRENCY: Number columns with positive number validation
+    - DATE: Date columns with date validation (after 1900)
+    - BOOLEAN: Boolean columns (no validation applied)
     
     Examples:
     - Basic table: table_name='SalesData', table_range='A1:C10', headers=['Name', 'Amount', 'Date']
@@ -632,6 +630,8 @@ def delete_table_tool(
         sheet_name=sheet_name,
         table_name=table_name
     )
+
+
 
 
 @mcp.tool()

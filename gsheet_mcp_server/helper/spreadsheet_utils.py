@@ -180,7 +180,10 @@ def get_table_ids_by_names(
                 # Create lookup dictionary for all tables in this sheet
                 table_lookup = {}
                 for table in tables:
-                    table_lookup[table.get("name")] = table.get("tableId")
+                    table_name = table.get("name")
+                    table_id = table.get("tableId")
+                    if table_name and table_id:  # Only add if both name and ID exist
+                        table_lookup[table_name] = table_id
                 
                 # Return results for requested table names
                 results = {}

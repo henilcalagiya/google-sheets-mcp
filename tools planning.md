@@ -150,15 +150,16 @@ This document outlines the planning and development roadmap for Google Sheets AP
 
 ## Table Tools and Their API Requests ----------------------------------
 
-### 26. Add/create table
+### 26. Add/create table 🟢
 - **Tool Name**: `add_table_tool`
 - **API Request**: `AddTableRequest`
-- **Status**: [ ] Not implemented
+- **Status**: [x] Implemented
 - **Priority**: High
 
-### 27. Get table metadata/properties
+### 27. Get table metadata/properties 🟢
+- **Tool Name**: `get_table_metadata_tool`
 - **API Request**: `spreadsheets.get` (includes tables list and metadata in sheet data)
-- **Status**: [ ] Not implemented
+- **Status**: [x] Implemented
 - **Priority**: High
 
 ### 28. Update table properties

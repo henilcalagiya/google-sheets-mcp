@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Set, Tuple
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
@@ -21,12 +21,122 @@ class SheetStructuresResponse(BaseModel):
 
 def col_to_letter(col_num):
     """Convert column number to A1 notation letter."""
+    # Handle edge case where col_num is 0 or negative
+    if col_num <= 0:
+        return "A"  # Default to column A
+    
     if col_num <= 26:
         return chr(64 + col_num)
     elif col_num <= 702:  # ZZ
         return chr(64 + (col_num - 1) // 26) + chr(64 + ((col_num - 1) % 26) + 1)
     else:
         return f"A{col_num}"  # Fallback for very large column numbers
+
+def letter_to_col(letter):
+    """Convert A1 notation letter to column number."""
+    col = 0
+    for char in letter.upper():
+        col = col * 26 + (ord(char) - ord('A') + 1)
+    return col
+
+def parse_range(range_str: str) -> Tuple[int, int, int, int]:
+    """
+    Parse A1 notation range to (start_row, end_row, start_col, end_col).
+    Returns 1-based indices.
+    """
+    if ':' not in range_str:
+        # Single cell like "A1"
+        col_letter = ''.join(c for c in range_str if c.isalpha())
+        row_num = int(''.join(c for c in range_str if c.isdigit()))
+        col_num = letter_to_col(col_letter)
+        return row_num, row_num, col_num, col_num
+    
+    # Range like "A1:C10"
+    start, end = range_str.split(':')
+    
+    # Parse start
+    start_col_letter = ''.join(c for c in start if c.isalpha())
+    start_row = int(''.join(c for c in start if c.isdigit()))
+    start_col = letter_to_col(start_col_letter)
+    
+    # Parse end
+    end_col_letter = ''.join(c for c in end if c.isalpha())
+    end_row = int(''.join(c for c in end if c.isdigit()))
+    end_col = letter_to_col(end_col_letter)
+    
+    return start_row, end_row, start_col, end_col
+
+def is_cell_in_range(cell: str, range_str: str) -> bool:
+    """
+    Check if a cell (e.g., "B5") is within a range (e.g., "A1:C10").
+    """
+    try:
+        cell_col_letter = ''.join(c for c in cell if c.isalpha())
+        cell_row = int(''.join(c for c in cell if c.isdigit()))
+        cell_col = letter_to_col(cell_col_letter)
+        
+        start_row, end_row, start_col, end_col = parse_range(range_str)
+        
+        return (start_row <= cell_row <= end_row and 
+                start_col <= cell_col <= end_col)
+    except:
+        return False
+
+def ranges_overlap(range1: str, range2: str) -> bool:
+    """
+    Check if two ranges overlap (not just exact match).
+    """
+    try:
+        start_row1, end_row1, start_col1, end_col1 = parse_range(range1)
+        start_row2, end_row2, start_col2, end_col2 = parse_range(range2)
+        
+        # Check for overlap: ranges overlap if they intersect in both dimensions
+        rows_overlap = not (end_row1 < start_row2 or end_row2 < start_row1)
+        cols_overlap = not (end_col1 < start_col2 or end_col2 < start_col1)
+        
+        return rows_overlap and cols_overlap
+    except:
+        return False
+
+def get_all_table_ranges(native_tables: List[Dict], regular_tables: List[Dict]) -> Set[str]:
+    """
+    Collect all table ranges (native and regular) to avoid overlaps.
+    """
+    all_ranges = set()
+    
+    # Add native table ranges
+    for table in native_tables:
+        table_props = table.get("tableProperties", {})
+        table_range = table_props.get("range", {})
+        
+        # Convert to A1 notation with validation
+        start_row = max(1, table_range.get("startRowIndex", 0) + 1)
+        start_col = max(1, table_range.get("startColumnIndex", 0) + 1)
+        
+        # Handle end indices properly for table ranges
+        raw_end_row = table_range.get("endRowIndex", 0)
+        raw_end_col = table_range.get("endColumnIndex", 0)
+        
+        if raw_end_row <= 0:
+            end_row = start_row + 3  # Default to 4 rows
+        else:
+            end_row = raw_end_row
+        
+        if raw_end_col <= 0:
+            end_col = start_col + 4  # Default to 5 columns
+        else:
+            end_col = raw_end_col
+        
+        start_col_letter = col_to_letter(start_col)
+        end_col_letter = col_to_letter(end_col)
+        range_str = f"{start_col_letter}{start_row}:{end_col_letter}{end_row}"
+        all_ranges.add(range_str)
+    
+    # Add regular table ranges
+    for table in regular_tables:
+        all_ranges.add(table["range"])
+    
+    return all_ranges
 
 def get_sheet_structures(
     drive_service,
@@ -115,19 +225,59 @@ def get_sheet_structures(
             table_props = table.get("tableProperties", {})
             table_range = table_props.get("range", {})
             
-            # Convert range to A1 notation
-            start_row = table_range.get("startRowIndex", 0) + 1
-            end_row = table_range.get("endRowIndex", 0)
-            start_col = table_range.get("startColumnIndex", 0) + 1
-            end_col = table_range.get("endColumnIndex", 0)
+            # Convert range to A1 notation with validation
+            start_row = max(1, table_range.get("startRowIndex", 0) + 1)
+            start_col = max(1, table_range.get("startColumnIndex", 0) + 1)
+            
+            # Handle end indices properly - if they're 0 or missing, we need to infer them
+            raw_end_row = table_range.get("endRowIndex", 0)
+            raw_end_col = table_range.get("endColumnIndex", 0)
+            
+            # If end indices are 0 or missing, we need to handle this differently
+            if raw_end_row <= 0:
+                # For now, use a reasonable default - in a real implementation,
+                # we would try to infer this from the actual data
+                end_row = start_row + 3  # Default to 4 rows if we can't determine
+            else:
+                end_row = raw_end_row
+            
+            if raw_end_col <= 0:
+                # For now, use a reasonable default - in a real implementation,
+                # we would try to infer this from the actual data
+                end_col = start_col + 4  # Default to 5 columns if we can't determine
+            else:
+                end_col = raw_end_col
+            
+
             
             start_col_letter = col_to_letter(start_col)
             end_col_letter = col_to_letter(end_col)
             range_str = f"{start_col_letter}{start_row}:{end_col_letter}{end_row}"
             
+            # Get the actual table name, fallback to auto-generated if empty
+            # Try different possible field names for table name
+            table_name = table.get("displayName", "")  # Try table root first
+            if not table_name or table_name.strip() == "":
+                table_name = table_props.get("displayName", "")  # Try tableProperties
+            if not table_name or table_name.strip() == "":
+                table_name = table.get("name", "")  # Try table root
+            if not table_name or table_name.strip() == "":
+                table_name = table_props.get("name", "")  # Try tableProperties
+            if not table_name or table_name.strip() == "":
+                table_name = table.get("title", "")  # Try table root
+            if not table_name or table_name.strip() == "":
+                table_name = table_props.get("title", "")  # Try tableProperties
+            if not table_name or table_name.strip() == "":
+                table_name = table.get("id", "")  # Try table root
+            if not table_name or table_name.strip() == "":
+                table_name = table_props.get("id", "")  # Try tableProperties
+            
+            if not table_name or table_name.strip() == "":
+                table_name = f"Table_{len([s for s in structures if s['structure_type'] == 'native_table']) + 1}"
+            
             structures.append({
                 "structure_type": "native_table",
-                "name": table_props.get("displayName", f"Table_{len([s for s in structures if s['structure_type'] == 'native_table']) + 1}"),
+                "name": table_name,
                 "range": range_str,
                 "description": f"Native table with {end_row - start_row + 1} rows and {end_col - start_col + 1} columns"
             })
@@ -145,7 +295,26 @@ def get_sheet_structures(
         charts = target_sheet.get("charts", [])
         for chart in charts:
             chart_spec = chart.get("spec", {})
-            chart_name = chart_spec.get("title", f"Chart_{len([s for s in structures if s['structure_type'] == 'chart']) + 1}")
+            
+            # Try different possible field names for chart name
+            chart_name = chart.get("title", "")  # Try chart root first
+            if not chart_name or chart_name.strip() == "":
+                chart_name = chart_spec.get("title", "")  # Try chart spec
+            if not chart_name or chart_name.strip() == "":
+                chart_name = chart.get("name", "")  # Try chart root
+            if not chart_name or chart_name.strip() == "":
+                chart_name = chart_spec.get("name", "")  # Try chart spec
+            if not chart_name or chart_name.strip() == "":
+                chart_name = chart.get("displayName", "")  # Try chart root
+            if not chart_name or chart_name.strip() == "":
+                chart_name = chart_spec.get("displayName", "")  # Try chart spec
+            if not chart_name or chart_name.strip() == "":
+                chart_name = chart.get("id", "")  # Try chart root
+            if not chart_name or chart_name.strip() == "":
+                chart_name = chart_spec.get("id", "")  # Try chart spec
+            
+            if not chart_name or chart_name.strip() == "":
+                chart_name = f"Chart_{len([s for s in structures if s['structure_type'] == 'chart']) + 1}"
             
             # Safely extract chart position
             position_info = chart.get("position", {})
@@ -167,10 +336,22 @@ def get_sheet_structures(
             ranges = named_range.get("ranges", [])
             for range_info in ranges:
                 if range_info.get("sheetId") == sheet_id:
-                    start_row = range_info.get("startRowIndex", 0) + 1
-                    end_row = range_info.get("endRowIndex", 0)
-                    start_col = range_info.get("startColumnIndex", 0) + 1
-                    end_col = range_info.get("endColumnIndex", 0)
+                    start_row = max(1, range_info.get("startRowIndex", 0) + 1)
+                    start_col = max(1, range_info.get("startColumnIndex", 0) + 1)
+                    
+                    # Handle end indices properly for named ranges
+                    raw_end_row = range_info.get("endRowIndex", 0)
+                    raw_end_col = range_info.get("endColumnIndex", 0)
+                    
+                    if raw_end_row <= 0:
+                        end_row = start_row + 3  # Default to 4 rows
+                    else:
+                        end_row = raw_end_row
+                    
+                    if raw_end_col <= 0:
+                        end_col = start_col + 4  # Default to 5 columns
+                    else:
+                        end_col = raw_end_col
                     
                     # Convert to A1 notation
                     start_col_letter = col_to_letter(start_col)
@@ -178,11 +359,23 @@ def get_sheet_structures(
                     
                     range_str = f"{start_col_letter}{start_row}:{end_col_letter}{end_row}"
                     
+                    # Try different possible field names for named range name
+                    range_name = named_range.get("name", "")
+                    if not range_name or range_name.strip() == "":
+                        range_name = named_range.get("displayName", "")
+                    if not range_name or range_name.strip() == "":
+                        range_name = named_range.get("title", "")
+                    if not range_name or range_name.strip() == "":
+                        range_name = named_range.get("id", "")
+                    
+                    if not range_name or range_name.strip() == "":
+                        range_name = "Unknown"
+                    
                     structures.append({
                         "structure_type": "named_range",
-                        "name": named_range.get("name", "Unknown"),
+                        "name": range_name,
                         "range": range_str,
-                        "description": f"Named range: {named_range.get('name', 'Unknown')}"
+                        "description": f"Named range: {range_name}"
                     })
                     summary["named_ranges"] += 1
         
@@ -198,7 +391,53 @@ def get_sheet_structures(
             if values:
                 # Detect regular data tables (non-native)
                 regular_tables = _detect_regular_tables(values)
+                
+                # Get all table ranges (native + regular) to avoid overlaps
+                all_table_ranges = get_all_table_ranges(native_tables, regular_tables)
+                
+                # Filter out regular tables that overlap with native tables
+                non_overlapping_regular_tables = []
                 for table in regular_tables:
+                    # Check if this regular table overlaps with any native table
+                    table_range = table["range"]
+                    overlaps_with_native = False
+                    
+                    for native_table in native_tables:
+                        table_props = native_table.get("tableProperties", {})
+                        native_range = table_props.get("range", {})
+                        
+                        # Convert native range to A1 notation with validation
+                        start_row = max(1, native_range.get("startRowIndex", 0) + 1)
+                        start_col = max(1, native_range.get("startColumnIndex", 0) + 1)
+                        
+                        # Handle end indices properly for overlap detection
+                        raw_end_row = native_range.get("endRowIndex", 0)
+                        raw_end_col = native_range.get("endColumnIndex", 0)
+                        
+                        if raw_end_row <= 0:
+                            end_row = start_row + 3  # Default to 4 rows
+                        else:
+                            end_row = raw_end_row
+                        
+                        if raw_end_col <= 0:
+                            end_col = start_col + 4  # Default to 5 columns
+                        else:
+                            end_col = raw_end_col
+                        
+                        start_col_letter = col_to_letter(start_col)
+                        end_col_letter = col_to_letter(end_col)
+                        native_range_str = f"{start_col_letter}{start_row}:{end_col_letter}{end_row}"
+                        
+                        # Check for overlap using proper range intersection
+                        if ranges_overlap(table_range, native_range_str):
+                            overlaps_with_native = True
+                            break
+                    
+                    if not overlaps_with_native:
+                        non_overlapping_regular_tables.append(table)
+                
+                # Add non-overlapping regular tables
+                for table in non_overlapping_regular_tables:
                     structures.append({
                         "structure_type": "regular_table",
                         "name": f"DataTable_{len([s for s in structures if s['structure_type'] == 'regular_table']) + 1}",
@@ -207,8 +446,8 @@ def get_sheet_structures(
                     })
                     summary["tables"] += 1
                 
-                # Detect scattered data areas
-                scattered_areas = _detect_scattered_data(values, regular_tables)
+                # Detect scattered data areas (excluding all table areas)
+                scattered_areas = _detect_scattered_data(values, non_overlapping_regular_tables, all_table_ranges)
                 for area in scattered_areas:
                     structures.append({
                         "structure_type": "scattered_data",
@@ -298,34 +537,28 @@ def _detect_regular_tables(values):
     
     return tables
 
-def _detect_scattered_data(values, tables):
+def _detect_scattered_data(values, tables, all_table_ranges):
     """Detect scattered data areas (non-table areas)."""
     scattered_areas = []
     if not values:
         return scattered_areas
     
-    # Get all table ranges
-    table_ranges = set()
-    for table in tables:
-        table_ranges.add(table["range"])
-    
-    # Find areas that are not part of tables
+    # Find areas that are not part of any table (native or regular)
     current_area = None
     
     for row_idx, row in enumerate(values):
         if not row:
             continue
         
-        # Check if this row has data outside of tables
+        # Check if this row has data outside of all tables
         has_scattered_data = False
         for col_idx, cell in enumerate(row):
             if cell and cell.strip():
                 cell_range = f"{chr(65 + col_idx)}{row_idx + 1}"
-                # Check if this cell is part of any table
+                # Check if this cell is part of any table (native or regular)
                 in_table = False
-                for table_range in table_ranges:
-                    # Simplified check - in real implementation would need proper range parsing
-                    if cell_range in table_range:
+                for table_range in all_table_ranges:
+                    if is_cell_in_range(cell_range, table_range):
                         in_table = True
                         break
                 
@@ -343,10 +576,19 @@ def _detect_scattered_data(values, tables):
             else:
                 current_area["end_row"] = row_idx
             
-            # Count cells in this row
-            for cell in row:
+            # Count cells in this row that are not in any table
+            for col_idx, cell in enumerate(row):
                 if cell and cell.strip():
-                    current_area["cells"] += 1
+                    cell_range = f"{chr(65 + col_idx)}{row_idx + 1}"
+                    # Only count if not in any table
+                    in_table = False
+                    for table_range in all_table_ranges:
+                        if is_cell_in_range(cell_range, table_range):
+                            in_table = True
+                            break
+                    
+                    if not in_table:
+                        current_area["cells"] += 1
         else:
             # End current area if we have one
             if current_area and current_area["cells"] > 0:

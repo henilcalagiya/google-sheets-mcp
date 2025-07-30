@@ -70,6 +70,29 @@ def add_table(
         if sheet_id is None:
             raise RuntimeError(f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'")
         
+        # Parse the table range to get start and end positions
+        # Expected format: 'A1:C10' or similar
+        import re
+        range_match = re.match(r'([A-Z]+)(\d+):([A-Z]+)(\d+)', table_range)
+        if not range_match:
+            raise RuntimeError(f"Invalid table range format: {table_range}. Expected format: 'A1:C10'")
+        
+        start_col_letter, start_row_str, end_col_letter, end_row_str = range_match.groups()
+        
+        # Convert column letters to indices (A=0, B=1, etc.)
+        def col_letter_to_index(col_letter):
+            index = 0
+            for char in col_letter:
+                index = index * 26 + (ord(char.upper()) - ord('A') + 1)
+            return index - 1
+        
+        start_col_index = col_letter_to_index(start_col_letter)
+        # Use the number of headers to determine the end column index
+        # This ensures all columns are included regardless of the range specification
+        end_col_index = start_col_index + len(headers)
+        start_row_index = int(start_row_str) - 1  # Convert to 0-based
+        end_row_index = int(end_row_str)  # Keep as exclusive
+        
         # Prepare the data for the table
         table_data = [headers] + (data if data else [])
         
@@ -83,26 +106,28 @@ def add_table(
         ).execute()
         
         # Create the table using AddTableRequest
+        table_request = {
+            "name": table_name,
+            "range": {
+                "sheetId": sheet_id,
+                "startRowIndex": start_row_index,
+                "endRowIndex": start_row_index + len(table_data),
+                "startColumnIndex": start_col_index,
+                "endColumnIndex": end_col_index
+            }
+        }
+        
         request_body = {
             "requests": [
                 {
                     "addTable": {
-                        "table": {
-                            "name": table_name,
-                            "range": {
-                                "sheetId": sheet_id,
-                                "startRowIndex": 0,
-                                "endRowIndex": len(table_data),
-                                "startColumnIndex": 0,
-                                "endColumnIndex": len(headers)
-                            }
-                        }
+                        "table": table_request
                     }
                 }
             ]
         }
         
-        # Execute the request
+        # Execute the table creation request
         response = sheets_service.spreadsheets().batchUpdate(
             spreadsheetId=spreadsheet_id,
             body=request_body
@@ -112,6 +137,64 @@ def add_table(
         if 'replies' in response and response['replies']:
             table_info = response['replies'][0].get('addTable', {}).get('table', {})
             table_id = table_info.get('tableId')
+            
+            # Apply data validation if column_types are provided
+            if column_types and len(column_types) == len(headers):
+                validation_requests = []
+                for i, col_type in enumerate(column_types):
+                    # Only apply validation for specific types that we know work
+                    if col_type.upper() in ["NUMBER", "DOUBLE", "INTEGER", "CURRENCY"]:
+                        # Create data validation request for numeric columns
+                        validation_request = {
+                            "setDataValidation": {
+                                "range": {
+                                    "sheetId": sheet_id,
+                                    "startRowIndex": start_row_index + 1,  # Skip header row
+                                    "endRowIndex": start_row_index + len(table_data),
+                                    "startColumnIndex": start_col_index + i,
+                                    "endColumnIndex": start_col_index + i + 1
+                                },
+                                "rule": {
+                                    "condition": {
+                                        "type": "NUMBER_GREATER_THAN",
+                                        "values": [{"userEnteredValue": "0"}]
+                                    },
+                                    "showCustomUi": True,
+                                    "strict": False
+                                }
+                            }
+                        }
+                        validation_requests.append(validation_request)
+                    elif col_type.upper() == "DATE":
+                        # Create data validation request for date columns
+                        validation_request = {
+                            "setDataValidation": {
+                                "range": {
+                                    "sheetId": sheet_id,
+                                    "startRowIndex": start_row_index + 1,  # Skip header row
+                                    "endRowIndex": start_row_index + len(table_data),
+                                    "startColumnIndex": start_col_index + i,
+                                    "endColumnIndex": start_col_index + i + 1
+                                },
+                                "rule": {
+                                    "condition": {
+                                        "type": "DATE_AFTER",
+                                        "values": [{"userEnteredValue": "1/1/1900"}]
+                                    },
+                                    "showCustomUi": True,
+                                    "strict": False
+                                }
+                            }
+                        }
+                        validation_requests.append(validation_request)
+                
+                # Apply data validation if we have any
+                if validation_requests:
+                    validation_body = {"requests": validation_requests}
+                    sheets_service.spreadsheets().batchUpdate(
+                        spreadsheetId=spreadsheet_id,
+                        body=validation_body
+                    ).execute()
             
             return {
                 "success": True,
@@ -123,7 +206,8 @@ def add_table(
                 "headers": headers,
                 "data_rows": len(data) if data else 0,
                 "column_count": len(headers),
-                "message": f"Successfully created table '{table_name}' with {len(data) if data else 0} rows and {len(headers)} columns"
+                "column_types": column_types if column_types else None,
+                "message": f"Successfully created table '{table_name}' with {len(data) if data else 0} rows and {len(headers)} columns (range: {start_col_letter}{start_row_str}:{chr(ord('A') + start_col_index + len(headers) - 1)}{end_row_str})"
             }
         else:
             raise RuntimeError("No response received from table creation request")
