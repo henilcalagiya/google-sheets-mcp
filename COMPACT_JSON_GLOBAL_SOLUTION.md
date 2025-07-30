@@ -85,7 +85,7 @@ Convert all handler functions to return `str` instead of `Dict[str, Any]`:
 14. `add_table_handler` → `str`
 15. `delete_table_handler` → `str`
 16. `add_table_records_handler` → `str`
-17. `modify_table_ranges_handler` → `str`
+17. `modify_table_ranges_handler` → `REMOVED`
 18. `format_cells_handler` → `str`
 19. `merge_cells_handler` → `str`
 20. `rename_spreadsheet_handler` → `str`
@@ -113,7 +113,7 @@ Convert all server tool functions to return `str`:
 16. `add_table_tool` → `str`
 17. `delete_table_tool` → `str`
 18. `add_table_records_tool` → `str`
-19. `modify_table_ranges_tool` → `str`
+19. `modify_table_ranges_tool` → `REMOVED`
 20. `format_cells_handler` → `str`
 21. `merge_cells_handler` → `str`
 

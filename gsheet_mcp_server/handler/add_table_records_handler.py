@@ -7,7 +7,9 @@ This module provides functionality to add new cells/data to existing table objec
 from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from googleapiclient.errors import HttpError
-from ..helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from ..helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from ..helper.sheets_utils import get_sheet_ids_by_names
+from ..helper.tables_utils import get_table_info, get_table_ids_by_names
 from ..helper.json_utils import compact_json_response
 
 
@@ -98,8 +100,9 @@ def add_table_records(
             })
         
         # Get table ID from table name
-        table_id = get_table_id_by_name(sheets_service, spreadsheet_id, sheet_name, table_name)
-        if table_id is None:
+        table_ids = get_table_ids_by_names(sheets_service, spreadsheet_id, sheet_name, [table_name])
+        table_id = table_ids.get(table_name)
+        if not table_id:
             return compact_json_response({
                 "success": False,
                 "message": f"Table '{table_name}' not found in sheet '{sheet_name}'"
@@ -270,97 +273,6 @@ def add_table_records(
         })
 
 
-def get_table_id_by_name(
-    sheets_service,
-    spreadsheet_id: str,
-    sheet_name: str,
-    table_name: str
-) -> str:
-    """
-    Get table ID from table name.
-    
-    Args:
-        sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
-        sheet_name: Name of the sheet
-        table_name: Name of the table
-    
-    Returns:
-        Table ID if found, None otherwise
-    """
-    try:
-        # Get spreadsheet to find table information
-        result = sheets_service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id,
-            fields="sheets.properties,sheets.tables"
-        ).execute()
-        
-        # Search for the table in the specified sheet
-        for sheet in result.get("sheets", []):
-            if sheet.get("properties", {}).get("title") == sheet_name:
-                tables = sheet.get("tables", [])
-                for table in tables:
-                    if table.get("name") == table_name:
-                        return table.get("tableId")
-                break
-        
-        return None
-        
-    except Exception as error:
-        raise RuntimeError(f"Error getting table ID: {error}")
 
 
-def get_table_info(
-    sheets_service,
-    spreadsheet_id: str,
-    table_id: str
-) -> Dict[str, Any]:
-    """
-    Get information about a specific table.
-    
-    Args:
-        sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
-        table_id: ID of the table
-    
-    Returns:
-        Dict containing table information
-    """
-    try:
-        # Get spreadsheet to find table information
-        result = sheets_service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id,
-            fields="sheets.properties,sheets.tables"
-        ).execute()
-        
-        # Search for the table across all sheets
-        for sheet in result.get("sheets", []):
-            tables = sheet.get("tables", [])
-            for table in tables:
-                if table.get("tableId") == table_id:
-                    table_range = table.get("range", {})
-                    start_row = table_range.get("startRowIndex", 0)
-                    end_row = table_range.get("endRowIndex", 0)
-                    start_col = table_range.get("startColumnIndex", 0)
-                    end_col = table_range.get("endColumnIndex", 0)
-                    
-                    # Calculate actual row and column counts from range
-                    actual_row_count = end_row - start_row
-                    actual_column_count = end_col - start_col
-                    
-                    return {
-                        "table_id": table_id,
-                        "table_name": table.get("name", "Unknown"),
-                        "range": table_range,
-                        "column_count": actual_column_count,
-                        "row_count": actual_row_count,
-                        "start_row": start_row,
-                        "end_row": end_row,
-                        "start_col": start_col,
-                        "end_col": end_col
-                    }
-        
-        raise RuntimeError(f"Table with ID '{table_id}' not found")
-        
-    except Exception as error:
-        raise RuntimeError(f"Error getting table info: {error}")
+

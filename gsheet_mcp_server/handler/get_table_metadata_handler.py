@@ -1,26 +1,26 @@
 """
-Handler for deleting native Google Sheets tables using DeleteTableRequest.
+Handler for getting metadata about native Google Sheets tables.
 
-This module provides functionality to remove existing table objects from Google Sheets.
+This module provides functionality to retrieve comprehensive metadata about table objects.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 from googleapiclient.errors import HttpError
 from ..helper.spreadsheet_utils import get_spreadsheet_id_by_name
 from ..helper.sheets_utils import get_sheet_ids_by_names
-from ..helper.tables_utils import get_table_info_simple, get_table_ids_by_names
+from ..helper.tables_utils import get_table_info, get_table_ids_by_names
 from ..helper.json_utils import compact_json_response
 
 
-class DeleteTableRequest(BaseModel):
-    """Request model for deleting native Google Sheets tables."""
+class GetTableMetadataRequest(BaseModel):
+    """Request model for getting metadata about native Google Sheets tables."""
     spreadsheet_name: str = Field(..., description="The name of the spreadsheet")
     sheet_name: str = Field(..., description="Name of the sheet containing the table")
-    table_name: str = Field(..., description="Name of the table to delete")
+    table_name: str = Field(..., description="Name of the table to get metadata for")
 
 
-def delete_table(
+def get_table_metadata(
     drive_service,
     sheets_service,
     spreadsheet_name: str,
@@ -28,25 +28,28 @@ def delete_table(
     table_name: str
 ) -> str:
     """
-    Delete a native Google Sheets table using DeleteTableRequest.
+    Get comprehensive metadata about a native Google Sheets table.
     
-    This tool completely removes the table object and all its data from the sheet.
-    The table structure, formatting, validation rules, and data will be permanently deleted.
-    
-    ⚠️ WARNING: This action is irreversible. All table data will be lost.
+    This tool retrieves detailed information about a table including:
+    - Table properties (name, range, column/row counts)
+    - Column properties (types, formatting, validation)
+    - Row properties and formatting
+    - Table styling and appearance
+    - Data validation rules
+    - Table filters and sorting
     
     Args:
         drive_service: Google Drive API service
         sheets_service: Google Sheets API service
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to delete
+        table_name: Name of the table to get metadata for
     
     Returns:
-        Compact JSON string containing deletion results with table information
+        Compact JSON string containing comprehensive table metadata
         
     Raises:
-        RuntimeError: If table deletion fails
+        RuntimeError: If table metadata retrieval fails
     """
     try:
         # Get spreadsheet ID
@@ -58,14 +61,15 @@ def delete_table(
             })
         
         # Get sheet ID
-        sheet_id = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [sheet_name])[sheet_name]
+        sheet_ids = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [sheet_name])
+        sheet_id = sheet_ids.get(sheet_name)
         if sheet_id is None:
             return compact_json_response({
                 "success": False,
                 "message": f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'"
             })
         
-        # Get table ID from table name
+        # Get table ID
         table_ids = get_table_ids_by_names(sheets_service, spreadsheet_id, sheet_name, [table_name])
         table_id = table_ids.get(table_name)
         if not table_id:
@@ -74,55 +78,34 @@ def delete_table(
                 "message": f"Table '{table_name}' not found in sheet '{sheet_name}'"
             })
         
-        # Create delete request for table
-        request_body = {
-            "requests": [
-                {
-                    "deleteTable": {
-                        "tableId": table_id
-                    }
-                }
-            ]
-        }
-        
-        # Execute the request
-        response = sheets_service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body=request_body
-        ).execute()
-        
-        # Check if deletion was successful
-        if 'replies' in response and response['replies']:
-            deleted_table = response['replies'][0].get('deleteTable', {}).get('table', {})
+        # Get comprehensive table metadata using centralized function
+        try:
+            table_info = get_table_info(sheets_service, spreadsheet_id, table_id)
             
+            # Return the processed table metadata
             return compact_json_response({
                 "success": True,
                 "spreadsheet_name": spreadsheet_name,
                 "sheet_name": sheet_name,
                 "table_name": table_name,
                 "table_id": table_id,
-                "message": f"Successfully deleted table '{table_name}' from sheet '{sheet_name}'"
+                "table_metadata": table_info,
+                "message": f"Successfully retrieved metadata for table '{table_name}'"
             })
-        else:
+            
+        except RuntimeError as error:
             return compact_json_response({
                 "success": False,
-                "message": "No response received from table deletion request"
+                "message": f"Could not retrieve table information: {str(error)}"
             })
         
     except HttpError as error:
-        error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details else {}
-        error_message = error_details.get('message', str(error))
         return compact_json_response({
             "success": False,
-            "message": f"Error deleting table: {error_message}"
+            "message": f"Google Sheets API error: {str(error)}"
         })
     except Exception as error:
         return compact_json_response({
             "success": False,
-            "message": f"Unexpected error deleting table: {error}"
-        })
-
-
-
-
-
+            "message": f"Unexpected error getting table metadata: {str(error)}"
+        }) 

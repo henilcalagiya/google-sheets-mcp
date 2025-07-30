@@ -35,53 +35,53 @@ This document outlines the planning and development roadmap for Google Sheets AP
 
 ## Sheet (Tab) Tools and Their API Requests ----------------------------------
 
-### 6. Add new sheet
+### 1. Add new sheet
 - **Tool Name**: `add_sheets_tool`
 - **API Request**: `AddSheetRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
 
-### 7. Delete sheet
+### 2. Delete sheet
 - **Tool Name**: `delete_sheets_tool`
 - **API Request**: `DeleteSheetRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
 
-### 8. Duplicate sheet
+### 3. Duplicate sheet
 - **Tool Name**: `duplicate_sheet_tool`
 - **API Request**: `DuplicateSheetRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: Medium
 
-### 9. Get sheet properties
+### 4. Get sheet properties
 - **API Request**: `spreadsheets.get` (returns all sheet properties)
 - **Status**: [ ] Not to do as of now 🔴
 - **Priority**: High
 
-### 10. Update sheet properties
+### 5. Update sheet properties
 - **Tool Name**: `rename_sheets_tool`
 - **API Request**: `UpdateSheetPropertiesRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: Medium
 
-### 11. Sort data on sheet
+### 6. Sort data on sheet
 - **API Request**: `SortRangeRequest`
 - **Status**: [ ] Not to do as of now 🔴
 - **Priority**: Medium
 
-### 12. Insert rows/columns
+### 7. Insert rows/columns
 - **Tool Name**: `insert_sheet_dimension`
 - **API Request**: `InsertDimensionRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
 
-### 13. Delete rows/columns
+### 8. Delete rows/columns
 - **Tool Name**: `delete_sheet_dimension`
 - **API Request**: `DeleteDimensionRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
 
-### 14. Move rows/columns
+### 9. Move rows/columns
 - **Tool Name**: `move_sheet_dimension`
 - **API Request**: `MoveDimensionRequest`
 - **Status**: [x] Implemented 🟢
@@ -89,264 +89,358 @@ This document outlines the planning and development roadmap for Google Sheets AP
 
 ## Cell/Range Tools and Their API Requests ----------------------------------
 
-### 15. Get values
+### 1. Get values
 - **Tool Name**: `read_sheet_data_tool`
 - **API Request**: `spreadsheets.values.get`, `spreadsheets.values.batchGet`
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
 
-### 16. Update values
+### 2. Update values
 - **API Request**: `spreadsheets.values.update`, `spreadsheets.values.batchUpdate`
 - **Status**: [ ] On hold 🟡
 - **Priority**: High
 
-### 17. Clear values
+### 3. Clear values
 - **API Request**: `spreadsheets.values.clear`
 - **Status**: [ ] On hold 🟡
 - **Priority**: Medium
 
-### 18. Copy/paste
+### 4. Copy/paste
 - **API Request**: `CopyPasteRequest`
 - **Status**: [ ] On hold 🟡
 - **Priority**: Medium
 
-### 19. Merge/unmerge cells
+### 5. Merge/unmerge cells
 - **API Request**: `MergeCellsRequest`, `UnmergeCellsRequest`
 - **Status**: [ ] On hold 🟡
 - **Priority**: Medium
 
-### 20. Update formatting
+### 6. Update formatting
 - **API Request**: `UpdateCellsRequest`, `RepeatCellRequest`
 - **Status**: [ ] On hold 🟡
 - **Priority**: Medium
 
 ## Chart Tools and Their API Requests ----------------------------------
 
-### 21. Add chart
+### 1. Add chart
 - **Tool Name**: `create_chart_tool`
 - **API Request**: `AddChartRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
-### 22. Get chart metadata/properties
+### 2. Get chart metadata/properties
 - **API Request**: `spreadsheets.get` (returns charts in sheet objects)
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
-### 23. Update chart properties
+### 3. Update chart properties
 - **API Request**: `UpdateChartSpecRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
-### 24. Move chart
+### 4. Move chart
 - **API Request**: `UpdateEmbeddedObjectPositionRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 25. Delete chart
+### 5. Delete chart
 - **API Request**: `DeleteEmbeddedObjectRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
 ## Table Tools and Their API Requests ----------------------------------
 
-### 26. Add/create table
+### 1. Create table
 - **Tool Name**: `add_table_tool`
 - **API Request**: `AddTableRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
 
-### 27. Get table metadata/properties
-- **Tool Name**: `get_table_metadata_tool`
-- **API Request**: `spreadsheets.get` (includes tables list and metadata in sheet data)
-- **Status**: [ ] Not implemented 🔴
-- **Priority**: High
-
-### 28. Update table properties
-- **API Request**: `UpdateTableRequest`, `UpdateTableColumnRequest`
-- **Status**: [ ] Not implemented 🔴
-- **Priority**: Medium
-
-### 29. Delete table
+### 2. Delete table
 - **Tool Name**: `delete_table_tool`
 - **API Request**: `DeleteTableRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
 
-### 30. Append rows to table
+### 3. Get table metadata
+- **Tool Name**: `get_table_metadata_tool`
+- **API Request**: `spreadsheets.get` (includes tables list and metadata in sheet data)
+- **Status**: [x] Implemented 🟢
+- **Priority**: High
+- **Description**: Retrieves comprehensive raw table metadata directly from Google Sheets API
+
+### 4. Rename table
+- **Tool Name**: `rename_table_tool`
+- **API Request**: `UpdateTableRequest`
+- **Status**: [x] Implemented 🟢
+- **Priority**: Medium
+- **Description**: Renames existing tables while preserving all data, formatting, and properties
+
+### 5. Update table properties
+- **Tool Name**: `update_table_properties_tool`
+- **API Request**: `UpdateTableRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Medium
+
+### 6. Add table records
 - **Tool Name**: `add_table_records_tool`
 - **API Request**: `AppendCellsRequest` (with tableId)
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
 
-### 31. Modify table ranges
-- **Tool Name**: `modify_table_ranges_tool`
-- **API Request**: `InsertRangeRequest`, `DeleteRangeRequest`
+### 7. Delete table records
+- **Tool Name**: `delete_table_records_tool`
+- **API Request**: `DeleteDimensionRequest`, `ClearValuesRequest`, `UpdateTableRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: Medium
 
-### 32. Set/update table data validation
+### 8. Update table records
+- **Tool Name**: `update_table_records_tool`
+- **API Request**: `UpdateCellsRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Medium
+
+### 9. Insert table records
+- **Tool Name**: `insert_table_records_tool`
+- **API Request**: `InsertDimensionRequest`, `UpdateCellsRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Medium
+
+### 10. Add table column
+- **Tool Name**: `add_table_column_tool`
+- **API Request**: `InsertDimensionRequest`, `UpdateTableRequest`
+- **Status**: [x] Implemented 🟢
+- **Priority**: Medium
+
+### 11. Delete table column
+- **Tool Name**: `delete_table_column_tool`
+- **API Request**: `DeleteDimensionRequest`, `UpdateTableRequest`
+- **Status**: [x] Implemented 🟢
+- **Priority**: Medium
+
+### 12. Move table column
+- **Tool Name**: `move_table_column_tool`
+- **API Request**: `MoveDimensionRequest`, `UpdateTableRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Low
+
+### 13. Update column properties
+- **Tool Name**: `update_table_column_properties_tool`
+- **API Request**: `UpdateTableColumnRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Medium
+
+### 14. Get table column metadata
+- **Tool Name**: `get_table_column_metadata_tool`
+- **API Request**: `spreadsheets.get` (includes table column properties)
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Low
+
+### 15. Resize table range
+- **Tool Name**: `resize_table_range_tool`
+- **API Request**: `UpdateTableRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Medium
+
+### 16. Set table data validation
+- **Tool Name**: `set_table_validation_tool`
 - **API Request**: `SetDataValidationRequest`
 - **Status**: [ ] Not implemented 🔴
 - **Priority**: Low
 
+### 17. Clear table data validation
+- **Tool Name**: `clear_table_validation_tool`
+- **API Request**: `SetDataValidationRequest` (with null/empty rule)
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Low
+
+### 18. Merge table cells
+- **Tool Name**: `merge_table_cells_tool`
+- **API Request**: `MergeCellsRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Low
+
+### 19. Unmerge table cells
+- **Tool Name**: `unmerge_table_cells_tool`
+- **API Request**: `UnmergeCellsRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Low
+
+### 20. Sort table data
+- **Tool Name**: `sort_table_data_tool`
+- **API Request**: `SortRangeRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Medium
+
+### 21. Filter table data
+- **Tool Name**: `filter_table_data_tool`
+- **API Request**: `SetBasicFilterRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Medium
+
+### 22. Clear table filters
+- **Tool Name**: `clear_table_filters_tool`
+- **API Request**: `ClearBasicFilterRequest`
+- **Status**: [ ] Not implemented 🔴
+- **Priority**: Medium
+
 ## Named Range Tools and Their API Requests ----------------------------------
 
-### 33. Add named range
+### 1. Add named range
 - **API Request**: `AddNamedRangeRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
-### 34. Get/list named ranges
+### 2. Get/list named ranges
 - **API Request**: `spreadsheets.get` (returns all named ranges)
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
-### 35. Update named range
+### 3. Update named range
 - **API Request**: `UpdateNamedRangeRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
-### 36. Delete named range
+### 4. Delete named range
 - **API Request**: `DeleteNamedRangeRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
 ## Developer Metadata Tools and Their API Requests ----------------------------------
 
-### 37. Add metadata
+### 1. Add metadata
 - **API Request**: `CreateDeveloperMetadataRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 38. Get/list metadata
+### 2. Get/list metadata
 - **API Request**: `GetDeveloperMetadataRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 39. Update metadata
+### 3. Update metadata
 - **API Request**: `UpdateDeveloperMetadataRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 40. Delete metadata
+### 4. Delete metadata
 - **API Request**: `DeleteDeveloperMetadataRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
 ## Filter and Filter View Tools and Their API Requests ----------------------------------
 
-### 41. Add filter view
+### 1. Add filter view
 - **API Request**: `AddFilterViewRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 42. Update filter view
+### 2. Update filter view
 - **API Request**: `UpdateFilterViewRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 43. Delete filter view
+### 3. Delete filter view
 - **API Request**: `DeleteFilterViewRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 44. Duplicate filter view
+### 4. Duplicate filter view
 - **API Request**: `DuplicateFilterViewRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 45. Set/clear basic filter
+### 5. Set/clear basic filter
 - **API Request**: `SetBasicFilterRequest`, `ClearBasicFilterRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
 ## Protected Range Tools and Their API Requests ----------------------------------
 
-### 46. Add protected range
+### 1. Add protected range
 - **API Request**: `AddProtectedRangeRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 47. Get/list protected ranges
+### 2. Get/list protected ranges
 - **API Request**: `spreadsheets.get` (returns protections)
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 48. Update protected range
+### 3. Update protected range
 - **API Request**: `UpdateProtectedRangeRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 49. Delete protected range
+### 4. Delete protected range
 - **API Request**: `DeleteProtectedRangeRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
 ## Pivot Table Tools and Their API Requests ----------------------------------
 
-### 50. Add pivot table
+### 1. Add pivot table
 - **API Request**: `AddPivotTableRequest` (within sheet data update)
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 51. Get pivot table metadata
+### 2. Get pivot table metadata
 - **API Request**: `spreadsheets.get`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 52. Update pivot table
+### 3. Update pivot table
 - **API Request**: `UpdateCellsRequest` (for pivot configuration)
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 53. Delete pivot table
+### 4. Delete pivot table
 - **API Request**: (Not a specific request—delete/clear range holding the pivot)
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
 ## Data Validation Tools and Their API Requests ----------------------------------
 
-### 54. Set data validation
+### 1. Set data validation
 - **API Request**: `SetDataValidationRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 55. Clear data validation
+### 2. Clear data validation
 - **API Request**: `SetDataValidationRequest` (with null/empty rule to clear)
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
 ## Conditional Formatting Tools and Their API Requests ----------------------------------
 
-### 56. Add conditional format rule
+### 1. Add conditional format rule
 - **API Request**: `AddConditionalFormatRuleRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
-### 57. Update conditional format rule
+### 2. Update conditional format rule
 - **API Request**: `UpdateConditionalFormatRuleRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
-### 58. Delete conditional format rule
+### 3. Delete conditional format rule
 - **API Request**: `DeleteConditionalFormatRuleRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Medium
 
 ## Embedded Object Tools and Their API Requests ----------------------------------
 
-### 59. Add embedded object
+### 1. Add embedded object
 - **API Request**: `AddEmbeddedObjectRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 60. Update embedded object
+### 2. Update embedded object
 - **API Request**: `UpdateEmbeddedObjectPositionRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low
 
-### 61. Delete embedded object
+### 3. Delete embedded object
 - **API Request**: `DeleteEmbeddedObjectRequest`
 - **Status**: [ ] Not implemented
 - **Priority**: Low

@@ -1,7 +1,8 @@
 from typing import Dict, Any
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel, Field
-from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from gsheet_mcp_server.helper.sheets_utils import get_sheet_ids_by_names
 from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 class MoveDimensionRequest(BaseModel):

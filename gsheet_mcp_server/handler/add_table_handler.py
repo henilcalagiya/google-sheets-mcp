@@ -7,7 +7,9 @@ This module provides functionality to create new table objects in Google Sheets.
 from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from googleapiclient.errors import HttpError
-from ..helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from ..helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from ..helper.sheets_utils import get_sheet_ids_by_names
+from ..helper.tables_utils import get_table_info
 from ..helper.json_utils import compact_json_response
 
 
@@ -239,43 +241,3 @@ def add_table(
         })
 
 
-def get_table_info(
-    sheets_service,
-    spreadsheet_id: str,
-    table_id: str
-) -> Dict[str, Any]:
-    """
-    Get information about a specific table.
-    
-    Args:
-        sheets_service: Google Sheets API service
-        spreadsheet_id: ID of the spreadsheet
-        table_id: ID of the table
-    
-    Returns:
-        Dict containing table information
-    """
-    try:
-        # Get spreadsheet to find table information
-        result = sheets_service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id,
-            fields="sheets.properties,sheets.tables"
-        ).execute()
-        
-        # Search for the table across all sheets
-        for sheet in result.get("sheets", []):
-            tables = sheet.get("tables", [])
-            for table in tables:
-                if table.get("tableId") == table_id:
-                    return {
-                        "table_id": table_id,
-                        "table_name": table.get("name", "Unknown"),
-                        "range": table.get("range", {}),
-                        "column_count": len(table.get("columnProperties", [])),
-                        "row_count": len(table.get("rowsProperties", [])) if table.get("rowsProperties") else 0
-                    }
-        
-        raise RuntimeError(f"Table with ID '{table_id}' not found")
-        
-    except Exception as error:
-        raise RuntimeError(f"Error getting table info: {error}")

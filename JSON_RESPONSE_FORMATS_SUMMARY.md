@@ -64,7 +64,7 @@ return compact_json_response({
 16. **`add_table_tool`** → `Dict[str, Any]`
 17. **`delete_table_tool`** → `Dict[str, Any]`
 18. **`add_table_records_tool`** → `Dict[str, Any]`
-19. **`modify_table_ranges_tool`** → `Dict[str, Any]`
+19. **`modify_table_ranges_tool`** → `REMOVED`
 
 ### **🎨 Formatting Tools:**
 20. **`format_cells_handler`** → `Dict[str, Any]`

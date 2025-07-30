@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 from googleapiclient.errors import HttpError
-from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from gsheet_mcp_server.helper.sheets_utils import get_sheet_ids_by_names
 from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 def rename_sheets(sheets_service, spreadsheet_id: str, sheet_ids: List[int], new_titles: List[str]) -> List[str]:

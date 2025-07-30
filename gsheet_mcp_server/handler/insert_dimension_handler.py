@@ -1,6 +1,7 @@
 from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
-from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name, get_sheet_ids_by_names
+from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
+from gsheet_mcp_server.helper.sheets_utils import get_sheet_ids_by_names
 from gsheet_mcp_server.helper.json_utils import compact_json_response
 
 def insert_dimension(
