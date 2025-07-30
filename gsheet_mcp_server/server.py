@@ -21,7 +21,7 @@ from .models import SheetInfo
 from .handler.rename_sheets_handler import rename_sheets_handler
 from .handler.read_sheet_data_handler import read_multiple_ranges
 from .handler.create_chart_handler import create_chart
-from .handler.get_sheet_structures_handler import get_sheet_structures
+
 from .handler.get_spreadsheets_overview_handler import get_spreadsheets_overview_handler
 
 from .handler.find_replace_handler import find_replace_text
@@ -34,9 +34,10 @@ from .handler.conditional_format_handler import conditional_format_data
 from .handler.merge_cells_handler import merge_cells_data
 from .handler.add_table_handler import add_table
 from .handler.delete_table_handler import delete_table
-from .handler.modify_table_rows_handler import modify_table_rows
-from .handler.modify_table_columns_handler import modify_table_columns
+from .handler.modify_table_ranges_handler import modify_table_ranges
 from .handler.add_table_records_handler import add_table_records
+from .handler.get_sheet_metadata_handler import get_sheet_metadata_handler
+from .handler.get_detailed_spreadsheet_metadata_handler import get_spreadsheet_metadata_handler
 
 
 # Create an MCP server
@@ -295,34 +296,7 @@ def read_sheet_data_tool(
     )
 
 
-@mcp.tool()
-def get_sheet_structures_tool(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet")
-) -> Dict[str, Any]:
-    """
-    Get all structures found in a Google Sheet.
-    
-    This tool discovers and categorizes different types of structures
-    in a sheet, including tables, charts, named ranges, pivot tables,
-    filter views, protected ranges, and developer metadata.
-    
-    Examples:
-    - Get structures in main data sheet: sheet_name="Data"
-    - Get structures in summary sheet: sheet_name="Summary"
-    - Get structures in chart sheet: sheet_name="Charts"
-    """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return get_sheet_structures(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name
-    )
+
 
 
 
@@ -731,102 +705,144 @@ def add_table_records_tool(
 
 
 @mcp.tool()
-def modify_table_rows_tool(
+def modify_table_ranges_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="Name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to modify rows in"),
+    table_name: str = Field(..., description="Name of the table to modify ranges in"),
     operation: str = Field(..., description="Operation to perform: INSERT or DELETE"),
-    position: int = Field(..., description="Position where to insert/delete rows (0-based)"),
-    count: int = Field(..., description="Number of rows to insert/delete")
+    range_to_modify: str = Field(..., description="Range to modify (e.g., 'A1:C5')"),
+    shift_direction: str = Field(default="ROWS", description="Shift direction: ROWS or COLUMNS"),
+    data: Optional[List[List[Union[str, int, float, bool]]]] = Field(default=None, description="Data to insert (for INSERT operations)")
 ) -> Dict[str, Any]:
     """
-    Insert or delete rows within a native Google Sheets table using InsertDimensionRequest/DeleteDimensionRequest.
+    Modify ranges within a native Google Sheets table using InsertRangeRequest/DeleteRangeRequest.
     
-    This tool can either insert empty rows (shifting existing data down) or delete rows (shifting existing data up).
+    This unified tool can either insert or delete ranges of cells and shift existing data accordingly.
+    It's more precise than dimension-based operations as it works with specific ranges.
     
     Args:
         spreadsheet_name: Name of the spreadsheet containing the table
         sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to modify rows in
+        table_name: Name of the table to modify ranges in
         operation: Operation to perform ("INSERT" or "DELETE")
-        position: Position where to insert/delete rows (0-based)
-        count: Number of rows to insert/delete
+        range_to_modify: Range to modify (e.g., 'A1:C5')
+        shift_direction: Shift direction ("ROWS" or "COLUMNS")
+        data: Optional data to insert (for INSERT operations)
     
     Returns:
         Dict containing operation results with table information
         
     Examples:
-        - Insert 2 rows at position 2: operation="INSERT", position=2, count=2
-        - Delete 1 row at position 5: operation="DELETE", position=5, count=1
-        - Insert 3 rows at position 0: operation="INSERT", position=0, count=3
+        - Insert range A1:C5: operation="INSERT", range_to_modify="A1:C5", shift_direction="ROWS"
+        - Delete range B2:D4: operation="DELETE", range_to_modify="B2:D4", shift_direction="COLUMNS"
+        - Insert range with data: operation="INSERT", range_to_modify="A1:C3", data=[["John", 100], ["Jane", 200]]
+        - Delete single cell: operation="DELETE", range_to_modify="A1:A1", shift_direction="ROWS"
     
     Note: The table will be found by name, so you don't need to know the table ID.
-    The inserted rows will be empty and can be populated with data afterward.
+    For INSERT operations, the range will be empty unless data is provided.
+    For DELETE operations, the range will be removed and remaining data will be shifted.
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
-    return modify_table_rows(
+    return modify_table_ranges(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
         sheet_name=sheet_name,
         table_name=table_name,
         operation=operation,
-        position=position,
-        count=count
+        range_to_modify=range_to_modify,
+        shift_direction=shift_direction,
+        data=data
     )
 
 
 @mcp.tool()
-def modify_table_columns_tool(
+def get_sheet_metadata_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="Name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to modify columns in"),
-    operation: str = Field(..., description="Operation to perform: INSERT or DELETE"),
-    position: int = Field(..., description="Position where to insert/delete columns (0-based)"),
-    count: int = Field(..., description="Number of columns to insert/delete")
-) -> Dict[str, Any]:
+    sheet_name: str = Field(..., description="Name of the specific sheet to get detailed metadata for")
+) -> str:
     """
-    Insert or delete columns within a native Google Sheets table using InsertDimensionRequest/DeleteDimensionRequest.
+    Get comprehensive metadata about a specific sheet including grid data, formatting, properties, charts, tables, slicers, and drawings.
     
-    This tool can either insert empty columns (shifting existing data right) or delete columns (shifting existing data left).
+    This tool provides detailed information about a single sheet structure, including:
+    - Grid properties (row/column counts, frozen panes, gridlines)
+    - Row and column metadata (heights, widths, hidden status)
+    - Data statistics (rows with data, total cells, non-empty cells)
+    - Merged cells information
+    - Basic filters and sorting
+    - Charts with detailed specifications (chart types, data ranges, axis labels, legends)
+    - Tables with range and properties information
+    - Slicers for interactive filtering
+    - Drawings and visual elements
+    - Conditional formatting and protected ranges
+    - Developer metadata and custom structures
     
     Args:
-        spreadsheet_name: Name of the spreadsheet containing the table
-        sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to modify columns in
-        operation: Operation to perform ("INSERT" or "DELETE")
-        position: Position where to insert/delete columns (0-based)
-        count: Number of columns to insert/delete
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the specific sheet to get metadata for (required)
     
     Returns:
-        Dict containing operation results with table information
+        Compact JSON string containing comprehensive metadata for the specified sheet
         
     Examples:
-        - Insert 2 columns at position 1: operation="INSERT", position=1, count=2
-        - Delete 1 column at position 0: operation="DELETE", position=0, count=1
-        - Insert 3 columns at position 2: operation="INSERT", position=2, count=3
-    
-    Note: The table will be found by name, so you don't need to know the table ID.
-    The inserted columns will be empty and can be populated with data afterward.
+        # Get detailed metadata for a specific sheet
+        - spreadsheet_name="My Spreadsheet", sheet_name="Sheet1"
+        
+    Note: This tool provides the most comprehensive metadata available for a single sheet
+    including charts, tables, slicers, and drawings.
     """
     if not drive_service:
         raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     if not sheets_service:
         raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
     
-    return modify_table_columns(
+    return get_sheet_metadata_handler(
         drive_service=drive_service,
         sheets_service=sheets_service,
         spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        table_name=table_name,
-        operation=operation,
-        position=position,
-        count=count
+        sheet_name=sheet_name
+    )
+
+
+@mcp.tool()
+def get_spreadsheet_metadata_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet")
+) -> str:
+    """
+    Get metadata about a spreadsheet including basic information about sheets, named ranges, and developer metadata.
+    
+    This tool provides basic information about the spreadsheet structure, including:
+    - Spreadsheet-level properties (title, locale, timeZone, defaultCellFormat)
+    - Basic sheet information (names, counts, hidden status)
+    - Named ranges and developer metadata
+    - Summary statistics
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet to analyze
+    
+    Returns:
+        Dict containing basic spreadsheet metadata
+        
+    Examples:
+        # Get metadata for a spreadsheet
+        - spreadsheet_name="My Spreadsheet"
+        
+    Note: This tool provides basic metadata about the spreadsheet structure.
+    It excludes grid cell data to focus on structure and metadata only.
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    return get_spreadsheet_metadata_handler(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        spreadsheet_name=spreadsheet_name
     )
 
 

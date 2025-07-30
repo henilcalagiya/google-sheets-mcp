@@ -91,6 +91,12 @@ def add_table_records(
         table_range = table_info.get("range", {})
         current_row_count = table_info.get("row_count", 0)
         
+        print(f"DEBUG: Current table info before operation:")
+        print(f"  Table: {table_name}")
+        print(f"  Current row count: {current_row_count}")
+        print(f"  Table range: {table_range}")
+        print(f"  Start row: {table_info.get('start_row', 0)}, End row: {table_info.get('end_row', 0)}")
+        
         # Calculate target positions based on operation
         if operation == "APPEND":
             if append_position == "END":
@@ -122,6 +128,8 @@ def add_table_records(
             # For APPEND: Use values().append which is more efficient and handles table expansion
             range_name = f"{sheet_name}!A{target_start_row + 1}"
             
+            print(f"DEBUG: Appending {len(values)} rows to table '{table_name}' at range {range_name}")
+            
             # Use values().append for APPEND operations
             response = sheets_service.spreadsheets().values().append(
                 spreadsheetId=spreadsheet_id,
@@ -131,7 +139,40 @@ def add_table_records(
                 body={"values": values}
             ).execute()
             
-            # No need for manual table range update - values().append handles it automatically
+            print(f"DEBUG: values().append response: {response}")
+            
+            # Explicitly update table range to ensure it's properly extended
+            try:
+                update_table_request = {
+                    "requests": [
+                        {
+                            "updateTable": {
+                                "tableId": table_id,
+                                "table": {
+                                    "tableProperties": {
+                                        "range": {
+                                            "startRowIndex": table_range.get("startRowIndex", 0),
+                                            "endRowIndex": table_range.get("endRowIndex", 0) + len(values),
+                                            "startColumnIndex": table_range.get("startColumnIndex", 0),
+                                            "endColumnIndex": table_range.get("endColumnIndex", 0)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+                
+                print(f"DEBUG: Updating table range with request: {update_table_request}")
+                sheets_service.spreadsheets().batchUpdate(
+                    spreadsheetId=spreadsheet_id,
+                    body=update_table_request
+                ).execute()
+                print(f"DEBUG: Table range update completed")
+                
+            except Exception as e:
+                print(f"DEBUG: Warning - could not update table range: {e}")
+                # Continue anyway as values().append should handle it
             
         else:  # INSERT operation
             # For INSERT: Use values().update (simpler than batchUpdate with updateCells)
@@ -171,6 +212,11 @@ def add_table_records(
         # Get updated table info to confirm changes
         updated_table_info = get_table_info(sheets_service, spreadsheet_id, table_id)
         new_row_count = updated_table_info.get("row_count", current_row_count + len(values))
+        
+        print(f"DEBUG: Updated table info after operation:")
+        print(f"  New row count: {new_row_count}")
+        print(f"  Updated table range: {updated_table_info.get('range', {})}")
+        print(f"  Start row: {updated_table_info.get('start_row', 0)}, End row: {updated_table_info.get('end_row', 0)}")
         
         # Prepare response message
         operation_text = "appended" if operation == "APPEND" else "inserted"
@@ -267,12 +313,26 @@ def get_table_info(
             tables = sheet.get("tables", [])
             for table in tables:
                 if table.get("tableId") == table_id:
+                    table_range = table.get("range", {})
+                    start_row = table_range.get("startRowIndex", 0)
+                    end_row = table_range.get("endRowIndex", 0)
+                    start_col = table_range.get("startColumnIndex", 0)
+                    end_col = table_range.get("endColumnIndex", 0)
+                    
+                    # Calculate actual row and column counts from range
+                    actual_row_count = end_row - start_row
+                    actual_column_count = end_col - start_col
+                    
                     return {
                         "table_id": table_id,
                         "table_name": table.get("name", "Unknown"),
-                        "range": table.get("range", {}),
-                        "column_count": len(table.get("columnProperties", [])),
-                        "row_count": len(table.get("rowsProperties", [])) if table.get("rowsProperties") else 0
+                        "range": table_range,
+                        "column_count": actual_column_count,
+                        "row_count": actual_row_count,
+                        "start_row": start_row,
+                        "end_row": end_row,
+                        "start_col": start_col,
+                        "end_col": end_col
                     }
         
         raise RuntimeError(f"Table with ID '{table_id}' not found")

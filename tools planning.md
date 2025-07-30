@@ -179,8 +179,8 @@ This document outlines the planning and development roadmap for Google Sheets AP
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
 
-### 31. Insert/delete rows/columns in table
-- **Tool Name**: `modify_table_rows_tool`, `modify_table_columns_tool`
+### 31. Modify table ranges
+- **Tool Name**: `modify_table_ranges_tool`
 - **API Request**: `InsertRangeRequest`, `DeleteRangeRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: Medium
