@@ -22,6 +22,7 @@ from .handler.rename_sheets_handler import rename_sheets_handler
 from .handler.read_sheet_data_handler import read_multiple_ranges
 from .handler.create_chart_handler import create_chart
 from .handler.get_sheet_structures_handler import get_sheet_structures
+from .handler.get_spreadsheets_overview_handler import get_spreadsheets_overview_handler
 
 from .handler.find_replace_handler import find_replace_text
 from .handler.insert_dimension_handler import insert_dimension_handler
@@ -75,6 +76,33 @@ else:
 
 
 # Remove the list_spreadsheets tool function (from @mcp.tool() def list_spreadsheets ... to its end)
+
+
+@mcp.tool()
+def get_all_spreadsheets_overview_tool(
+    max_spreadsheets: int = Field(default=10, description="Maximum number of spreadsheets to analyze")
+) -> Dict[str, Any]:
+    """
+    Get a comprehensive overview of all spreadsheets with their sheets.
+    
+    Returns a detailed overview of all accessible spreadsheets, including:
+    - List of all spreadsheets with their names and IDs
+    - All sheets within each spreadsheet with basic properties
+    - Summary statistics across all spreadsheets
+    
+    This tool provides a bird's-eye view of your entire Google Sheets workspace.
+    """
+    if not drive_service:
+        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    if not sheets_service:
+        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    
+    return get_spreadsheets_overview_handler(
+        drive_service=drive_service,
+        sheets_service=sheets_service,
+        max_spreadsheets=max_spreadsheets
+    )
+
 
 
 @mcp.tool()
@@ -295,6 +323,7 @@ def get_sheet_structures_tool(
         spreadsheet_name=spreadsheet_name,
         sheet_name=sheet_name
     )
+
 
 
 
