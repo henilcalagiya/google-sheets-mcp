@@ -33,19 +33,22 @@ def add_table_records(
     append_position: str = "END"
 ) -> Dict[str, Any]:
     """
-    Append or insert records to a native Google Sheets table.
+    Add records to a native Google Sheets table using a simplified, unified approach.
     
-    This tool can either:
-    - APPEND: Add new data rows to the end/start of an existing table
-    - INSERT: Insert new data rows at a specific position within the table
+    This tool uses a single, reliable pattern:
+    1. Get table information and current data
+    2. Calculate new data positions
+    3. Insert rows if needed (for INSERT operations)
+    4. Write data to calculated positions
+    5. Let Google Sheets handle table range updates automatically
     
     Args:
         drive_service: Google Drive API service
         sheets_service: Google Sheets API service
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to append/insert records to
-        data: 2D list of data rows to append/insert
+        table_name: Name of the table to add records to
+        data: 2D list of data rows to add
         operation: Operation type ("APPEND" or "INSERT")
         position: Position to insert data (0-based, required for INSERT)
         append_position: Where to append (START or END, for APPEND operation)
@@ -85,9 +88,22 @@ def add_table_records(
         
         # Get current table information
         table_info = get_table_info(sheets_service, spreadsheet_id, table_id)
+        table_range = table_info.get("range", {})
         current_row_count = table_info.get("row_count", 0)
         
-        # Convert data to simple values for updateCells
+        # Calculate target positions based on operation
+        if operation == "APPEND":
+            if append_position == "END":
+                # Append to end: insert after the last data row
+                target_start_row = table_range.get("endRowIndex", 0)
+            else:  # START
+                # Append to start: insert after header row
+                target_start_row = table_range.get("startRowIndex", 0) + 1
+        else:  # INSERT
+            # Insert at specific position: calculate actual sheet position
+            target_start_row = table_range.get("startRowIndex", 0) + 1 + position
+        
+        # Convert data to simple values
         values = []
         for row in data:
             row_values = []
@@ -101,24 +117,12 @@ def add_table_records(
                     row_values.append(str(cell_value))
             values.append(row_values)
         
-        # Get table range
-        table_range = table_info.get("range", {})
-        start_row = table_range.get("startRowIndex", 0)
-        end_row = table_range.get("endRowIndex", 0)
-        
+        # Step 1: Handle operations differently for better efficiency
         if operation == "APPEND":
-            # Calculate the range where we'll append the data
-            if append_position == "END":
-                insert_start_row = end_row
-                insert_end_row = end_row + len(values)
-            else:  # START
-                insert_start_row = start_row
-                insert_end_row = start_row + len(values)
+            # For APPEND: Use values().append which is more efficient and handles table expansion
+            range_name = f"{sheet_name}!A{target_start_row + 1}"
             
-            # Create the range string for appending
-            range_name = f"{sheet_name}!A{insert_start_row + 1}:Z{insert_end_row}"
-            
-            # Append the data using values().append
+            # Use values().append for APPEND operations
             response = sheets_service.spreadsheets().values().append(
                 spreadsheetId=spreadsheet_id,
                 range=range_name,
@@ -127,40 +131,13 @@ def add_table_records(
                 body={"values": values}
             ).execute()
             
-            # Update the table range to include the new rows
-            if append_position == "END":
-                updated_table_range = {
-                    "sheetId": sheet_id,
-                    "startRowIndex": start_row,
-                    "endRowIndex": insert_end_row,
-                    "startColumnIndex": table_range.get("startColumnIndex", 0),
-                    "endColumnIndex": table_range.get("endColumnIndex", 0)
-                }
-            else:  # START
-                updated_table_range = {
-                    "sheetId": sheet_id,
-                    "startRowIndex": insert_start_row,
-                    "endRowIndex": end_row + len(values),
-                    "startColumnIndex": table_range.get("startColumnIndex", 0),
-                    "endColumnIndex": table_range.get("endColumnIndex", 0)
-                }
+            # No need for manual table range update - values().append handles it automatically
             
         else:  # INSERT operation
-            # Calculate the actual row position in the sheet
-            actual_position = start_row + position
+            # For INSERT: Use values().update (simpler than batchUpdate with updateCells)
+            range_name = f"{sheet_name}!A{target_start_row + 1}"
             
-            # Create the range string for inserting
-            range_name = f"{sheet_name}!A{actual_position + 1}:Z{actual_position + len(values)}"
-            
-            # Insert the data using values().update with INSERT_ROWS
-            response = sheets_service.spreadsheets().values().update(
-                spreadsheetId=spreadsheet_id,
-                range=range_name,
-                valueInputOption="RAW",
-                body={"values": values}
-            ).execute()
-            
-            # First, insert empty rows at the position
+            # Insert empty rows first using insertDimension
             insert_request = {
                 "requests": [
                     {
@@ -168,8 +145,8 @@ def add_table_records(
                             "range": {
                                 "sheetId": sheet_id,
                                 "dimension": "ROWS",
-                                "startIndex": actual_position,
-                                "endIndex": actual_position + len(values)
+                                "startIndex": target_start_row,
+                                "endIndex": target_start_row + len(values)
                             },
                             "inheritFromBefore": True
                         }
@@ -183,60 +160,36 @@ def add_table_records(
                 body=insert_request
             ).execute()
             
-            # Update the table range to include the new rows
-            updated_table_range = {
-                "sheetId": sheet_id,
-                "startRowIndex": start_row,
-                "endRowIndex": end_row + len(values),
-                "startColumnIndex": table_range.get("startColumnIndex", 0),
-                "endColumnIndex": table_range.get("endColumnIndex", 0)
-            }
+            # Then write data using values().update (simpler than updateCells)
+            response = sheets_service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=range_name,
+                valueInputOption="RAW",
+                body={"values": values}
+            ).execute()
         
-        # Update the table with new range
-        update_request = {
-            "requests": [
-                {
-                    "updateTable": {
-                        "table": {
-                            "tableId": table_id,
-                            "range": updated_table_range
-                        },
-                        "fields": "range"
-                    }
-                }
-            ]
+        # Get updated table info to confirm changes
+        updated_table_info = get_table_info(sheets_service, spreadsheet_id, table_id)
+        new_row_count = updated_table_info.get("row_count", current_row_count + len(values))
+        
+        # Prepare response message
+        operation_text = "appended" if operation == "APPEND" else "inserted"
+        position_text = f" at position {position}" if operation == "INSERT" else f" to {append_position.lower()}"
+        
+        return {
+            "success": True,
+            "spreadsheet_name": spreadsheet_name,
+            "sheet_name": sheet_name,
+            "table_name": table_name,
+            "table_id": table_id,
+            "operation": operation,
+            "position": position if operation == "INSERT" else None,
+            "append_position": append_position if operation == "APPEND" else None,
+            "rows_affected": len(values),
+            "new_row_count": new_row_count,
+            "target_range": f"{sheet_name}!A{target_start_row + 1}:Z{target_start_row + len(values)}",
+            "message": f"Successfully {operation_text} {len(values)} rows{position_text} in table '{table_name}'"
         }
-        
-        # Execute the table update
-        update_response = sheets_service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body=update_request
-        ).execute()
-        
-        # Check if operation was successful
-        if response and update_response:
-            # Get updated table info
-            updated_table_info = get_table_info(sheets_service, spreadsheet_id, table_id)
-            new_row_count = updated_table_info.get("row_count", current_row_count + len(values))
-            
-            operation_text = "appended" if operation == "APPEND" else "inserted"
-            position_text = f" at position {position}" if operation == "INSERT" else f" to {append_position.lower()}"
-            
-            return {
-                "success": True,
-                "spreadsheet_name": spreadsheet_name,
-                "sheet_name": sheet_name,
-                "table_name": table_name,
-                "table_id": table_id,
-                "operation": operation,
-                "position": position if operation == "INSERT" else None,
-                "append_position": append_position if operation == "APPEND" else None,
-                "rows_affected": len(values),
-                "new_row_count": new_row_count,
-                "message": f"Successfully {operation_text} {len(values)} rows{position_text} in table '{table_name}'"
-            }
-        else:
-            raise RuntimeError("No response received from table operation request")
         
     except HttpError as error:
         error_details = error.error_details[0] if hasattr(error, 'error_details') and error.error_details and len(error.error_details) > 0 else {}

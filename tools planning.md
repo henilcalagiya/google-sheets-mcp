@@ -150,44 +150,44 @@ This document outlines the planning and development roadmap for Google Sheets AP
 
 ## Table Tools and Their API Requests ----------------------------------
 
-### 26. Add/create table 🟢
+### 26. Add/create table
 - **Tool Name**: `add_table_tool`
 - **API Request**: `AddTableRequest`
-- **Status**: [x] Implemented
+- **Status**: [x] Implemented 🟢
 - **Priority**: High
 
-### 27. Get table metadata/properties 🟢
+### 27. Get table metadata/properties
 - **Tool Name**: `get_table_metadata_tool`
 - **API Request**: `spreadsheets.get` (includes tables list and metadata in sheet data)
-- **Status**: [x] Implemented
+- **Status**: [ ] Not implemented 🔴
 - **Priority**: High
 
 ### 28. Update table properties
 - **API Request**: `UpdateTableRequest`, `UpdateTableColumnRequest`
-- **Status**: [ ] Not implemented
+- **Status**: [ ] Not implemented 🔴
 - **Priority**: Medium
 
 ### 29. Delete table
 - **Tool Name**: `delete_table_tool`
 - **API Request**: `DeleteTableRequest`
-- **Status**: [ ] Not implemented
+- **Status**: [x] Implemented 🟢
 - **Priority**: High
 
 ### 30. Append rows to table
 - **Tool Name**: `add_table_records_tool`
 - **API Request**: `AppendCellsRequest` (with tableId)
-- **Status**: [ ] Not implemented
+- **Status**: [x] Implemented 🟢
 - **Priority**: High
 
 ### 31. Insert/delete rows/columns in table
 - **Tool Name**: `modify_table_rows_tool`, `modify_table_columns_tool`
 - **API Request**: `InsertRangeRequest`, `DeleteRangeRequest`
-- **Status**: [ ] Not implemented
+- **Status**: [x] Implemented 🟢
 - **Priority**: Medium
 
 ### 32. Set/update table data validation
 - **API Request**: `SetDataValidationRequest`
-- **Status**: [ ] Not implemented
+- **Status**: [ ] Not implemented 🔴
 - **Priority**: Low
 
 ## Named Range Tools and Their API Requests ----------------------------------
