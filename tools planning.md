@@ -13,8 +13,9 @@ This document outlines the planning and development roadmap for Google Sheets AP
 ### 2. Get spreadsheet metadata/properties
 - **Tool Name**: `list_all_spreadsheets`
 - **API Request**: `spreadsheets.get`
-- **Status**: [x] Implemented 🟢
+- **Status**: [ ] Removed 🔴
 - **Priority**: High
+- **Note**: Replaced by `get_all_spreadsheets_and_sheets_tool`
 
 ### 3. Update spreadsheet properties
 - **Tool Name**: `rename_spreadsheet_tool`
@@ -28,7 +29,7 @@ This document outlines the planning and development roadmap for Google Sheets AP
 - **Priority**: Medium
 
 ### 5. List all sheets
-- **Tool Name**: `list_sheets_tool`
+- **Tool Name**: `list_sheets_tool` (REMOVED)
 - **API Request**: `spreadsheets.get`
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
@@ -125,7 +126,7 @@ This document outlines the planning and development roadmap for Google Sheets AP
 ### 1. Add chart
 - **Tool Name**: `create_chart_tool`
 - **API Request**: `AddChartRequest`
-- **Status**: [ ] Not implemented
+- **Status**: [ ] Removed 🔴
 - **Priority**: Medium
 
 ### 2. Get chart metadata/properties
@@ -151,7 +152,7 @@ This document outlines the planning and development roadmap for Google Sheets AP
 ## Table Tools and Their API Requests ----------------------------------
 
 ### 1. Create table
-- **Tool Name**: `add_table_tool`
+- **Tool Name**: `create_table_tool`
 - **API Request**: `AddTableRequest`
 - **Status**: [x] Implemented 🟢
 - **Priority**: High
@@ -456,8 +457,8 @@ This document outlines the planning and development roadmap for Google Sheets AP
 ### Search/Replace Tools:
 - **Tool Name**: `find_replace`
 - **API Request**: `FindReplaceRequest`
-- **Status**: [x] Implemented 🟢
-- **Description**: Find and replace text in ranges
+- **Status**: [ ] Removed 🔴
+- **Description**: Find and replace text in ranges (removed)
 
 ### Formatting Tools:
 - **Tool Name**: `resize_columns`

@@ -56,6 +56,21 @@ def get_table_info(
                     actual_row_count = end_row - start_row
                     actual_column_count = end_col - start_col
                     
+                    # Get column properties if available
+                    column_properties = table.get("columnProperties", [])
+                    columns = []
+                    
+                    for i, col_prop in enumerate(column_properties):
+                        column_info = {
+                            "name": col_prop.get("columnName", f"Column {i+1}"),
+                            "type": col_prop.get("columnType", "TEXT"),
+                            "index": i
+                        }
+                        # Preserve dataValidationRule if it exists
+                        if "dataValidationRule" in col_prop:
+                            column_info["dataValidationRule"] = col_prop["dataValidationRule"]
+                        columns.append(column_info)
+                    
                     return {
                         "table_id": table_id,
                         "table_name": table.get("name", "Unknown"),
@@ -65,7 +80,8 @@ def get_table_info(
                         "start_row": start_row,
                         "end_row": end_row,
                         "start_col": start_col,
-                        "end_col": end_col
+                        "end_col": end_col,
+                        "columns": columns
                     }
         
         raise RuntimeError(f"Table with ID '{table_id}' not found")
