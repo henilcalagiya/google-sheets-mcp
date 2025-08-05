@@ -3,7 +3,7 @@
 # Standard library imports
 import json
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 
 # Third-party library imports
 from google.auth.transport.requests import Request
@@ -17,54 +17,38 @@ from pydantic import BaseModel, Field
 # Local imports - Models
 from .models import SheetInfo
 
-# Column property models for table creation
-class DataValidationRule(BaseModel):
-    condition: Dict[str, Any] = Field(..., description="Validation condition with type and values")
-    
-class ColumnProperty(BaseModel):
-    columnName: str = Field(..., description="Name of the column (e.g., 'Employee Name', 'Age', 'Status')")
-    columnType: str = Field(..., description="Type of the column: TEXT, NUMBER, DATE, BOOLEAN, PERCENT, CURRENCY")
-    dataValidationRule: Optional[DataValidationRule] = Field(default=None, description="Optional data validation rule for dropdown columns with predefined options")
-
 # Local imports - Spreadsheet management handlers
 from .handler.spreadsheet.rename_spreadsheet_handler import rename_spreadsheet_handler
-from .handler.spreadsheet.get_all_spreadsheets_and_sheets_handler import get_all_spreadsheets_and_sheets_handler
+from .handler.spreadsheet.discover_spreadsheets_contents_handler import discover_spreadsheets_contents_handler
 
-# Local imports - Sheet management handlers
-
+# Local imports - Sheets handlers
 from .handler.sheets.add_sheets_handler import add_sheets_handler
 from .handler.sheets.delete_sheets_handler import delete_sheets_handler
 from .handler.sheets.duplicate_sheet_handler import duplicate_sheet_handler
 from .handler.sheets.rename_sheets_handler import rename_sheets_handler
-from .handler.sheets.get_sheet_metadata_handler import get_sheet_metadata_handler
-
-
-# Local imports - Data reading handlers
-from .handler.sheets.read_sheet_data_handler import read_multiple_ranges, read_sheet_data_handler
-
-# Local imports - Content manipulation handlers
-
-from .handler.content_manipulation.insert_dimension_handler import insert_dimension_handler
-from .handler.content_manipulation.delete_dimension_handler import delete_dimension
-from .handler.content_manipulation.move_dimension_handler import move_dimension
-from .handler.content_manipulation.resize_columns_handler import resize_columns_data
-
-# Local imports - Formatting handlers
-from .handler.formatting.format_cells_handler import format_cells_data
-from .handler.formatting.conditional_format_handler import conditional_format_data
-from .handler.formatting.merge_cells_handler import merge_cells_data
+from .handler.sheets.analyze_sheet_handler import analyze_sheet_handler
 
 # Local imports - Table management handlers
-from .handler.tables.add_table_handler import add_table_handler
+from .handler.tables.create_table_handler import create_table_handler
 from .handler.tables.delete_table_handler import delete_table_handler
 from .handler.tables.rename_table_handler import rename_table_handler
-from .handler.tables.add_table_column_handler import add_table_column_handler
-from .handler.tables.modify_column_properties_handler import modify_column_properties_handler
-from .handler.tables.delete_table_column_handler import delete_table_column_handler
 from .handler.tables.get_table_metadata_handler import get_table_metadata_handler
-from .handler.tables.manage_table_records_handler import modify_table_data_handler
-from .handler.tables.modify_cell_data_handler import modify_cell_data_handler
+from .handler.tables.add_table_column_handler import add_table_column_handler
 
+
+from .handler.tables.sort_table_handler import sort_table_handler
+from .handler.tables.clear_table_data_handler import clear_table_data_handler
+from .handler.tables.delete_table_records_handler import delete_table_records_handler
+from .handler.tables.get_table_rows_handler import get_table_rows_handler
+from .handler.tables.update_table_row_handler import update_table_row_handler
+from .handler.tables.update_table_cells_handler import update_table_cells_handler
+from .handler.tables.find_table_cells_handler import find_table_cells_handler
+from .handler.tables.rename_table_column_handler import rename_table_column_handler
+from .handler.tables.change_table_column_type_handler import change_table_column_type_handler
+from .handler.tables.manage_dropdown_options_handler import manage_dropdown_options_handler
+from .handler.tables.delete_table_column_handler import delete_table_column_handler
+
+from .handler.tables.insert_table_records_handler import insert_table_records_handler
 
 # Create an MCP server
 mcp = FastMCP("Google Sheets")
@@ -95,66 +79,55 @@ def _setup_google_services(credentials_path: str):
 
 # Initialize services
 credentials_path = os.getenv("GOOGLE_CREDENTIALS_PATH")
-if credentials_path:
-    sheets_service, drive_service = _setup_google_services(credentials_path)
-else:
-    sheets_service = None
-    drive_service = None
 
+if not credentials_path:
+    raise ValueError(
+        "GOOGLE_CREDENTIALS_PATH environment variable must be set to the path of your Google credentials JSON file"
+    )
 
-# =============================================================================
-# SPREADSHEET RELATED TOOLS
-# =============================================================================
-
-
-
-
-
+sheets_service, drive_service = _setup_google_services(credentials_path)
 
 
 @mcp.tool()
-def get_all_spreadsheets_and_sheets_tool(
+def discover_spreadsheets_contents_tool(
     max_spreadsheets: int = Field(default=10, description="Maximum number of spreadsheets to analyze")
 ) -> str:
-    """Get all spreadsheets and their sheets in a simple, clean format."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return get_all_spreadsheets_and_sheets_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        max_spreadsheets=max_spreadsheets
+    """
+    Discover and analyze all contents within spreadsheets including tables, charts, and other elements.
+    
+    This tool provides a comprehensive overview of all spreadsheets accessible to the user,
+    including detailed information about their structure, contents, and metadata.
+    
+    Args:
+        max_spreadsheets: Maximum number of spreadsheets to analyze (default: 10)
+    
+    Returns:
+        JSON string containing detailed information about discovered spreadsheets
+    """
+    return discover_spreadsheets_contents_handler(
+        drive_service, sheets_service, max_spreadsheets
     )
 
 
 @mcp.tool()
-def update_spreadsheet_title_tool(
+def rename_spreadsheet_title_tool(
     spreadsheet_name: str = Field(..., description="The name of the spreadsheet to rename"),
     new_title: str = Field(..., description="The new title for the spreadsheet")
 ) -> str:
-    """Rename a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    """
+    Rename a Google Spreadsheet.
     
-    return rename_spreadsheet_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        new_title=new_title
-    )
-
-
-
-
-
-# =============================================================================
-# SHEETS RELATED TOOLS
-# =============================================================================
-
-
+    This tool allows you to change the title of an existing Google Spreadsheet.
+    The operation is performed using the Google Sheets API batchUpdate method.
+    
+    Args:
+        spreadsheet_name: The current name of the spreadsheet to rename
+        new_title: The new title for the spreadsheet
+    
+    Returns:
+        JSON string with success status and operation details
+    """
+    return rename_spreadsheet_handler(drive_service, sheets_service, spreadsheet_name, new_title)
 
 
 @mcp.tool()
@@ -162,17 +135,20 @@ def add_sheets_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_names: List[str] = Field(..., description="List of sheet names to add as new sheets")
 ) -> str:
-    """Add new sheets to a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return add_sheets_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_names=sheet_names
-    )
+    """
+    Add new sheets to a Google Spreadsheet.
+    
+    This tool creates new sheets within an existing Google Spreadsheet.
+    Each sheet name in the list will become a separate sheet in the spreadsheet.
+    
+    Args:
+        spreadsheet_name: The name of the Google Spreadsheet
+        sheet_names: List of sheet names to add as new sheets
+    
+    Returns:
+        JSON string with success status and details about added sheets
+    """
+    return add_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names)
 
 
 @mcp.tool()
@@ -180,17 +156,20 @@ def delete_sheets_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_names: List[str] = Field(..., description="List of sheet names to delete")
 ) -> str:
-    """Delete sheets from a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return delete_sheets_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_names=sheet_names
-    )
+    """
+    Delete sheets from a Google Spreadsheet.
+    
+    This tool removes specified sheets from a Google Spreadsheet.
+    The operation is performed using the Google Sheets API batchUpdate method.
+    
+    Args:
+        spreadsheet_name: The name of the Google Spreadsheet
+        sheet_names: List of sheet names to delete
+    
+    Returns:
+        JSON string with success status and details about deleted sheets
+    """
+    return delete_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names)
 
 
 @mcp.tool()
@@ -198,255 +177,75 @@ def duplicate_sheet_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     source_sheet_name: str = Field(..., description="Name of the sheet to duplicate"),
     new_sheet_name: str = Field(default=None, description="Name for the duplicated sheet (optional, will auto-generate if not provided)"),
-    insert_position: int = Field(default=None, description="Position to insert the duplicated sheet (0-based index, optional - will insert at end if not specified)")
+    insert_position: int = Field(default=None, description="Position to insert the duplicated sheet (1-based index, optional - will insert at end if not specified)")
 ) -> str:
-    """Duplicate a sheet in a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return duplicate_sheet_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        source_sheet_name=source_sheet_name,
-        new_sheet_name=new_sheet_name,
-        insert_position=insert_position
-    )
+    """
+    Duplicate an existing sheet.
+    
+    This tool creates a copy of an existing sheet within the same spreadsheet.
+    The duplicated sheet will contain all the same data, formatting, and structure as the original.
+    
+    Args:
+        spreadsheet_name: The name of the Google Spreadsheet
+        source_sheet_name: Name of the sheet to duplicate
+        new_sheet_name: Name for the duplicated sheet (optional)
+        insert_position: Position to insert the duplicated sheet (optional)
+    
+    Returns:
+        JSON string with success status and details about the duplicated sheet
+    """
+    return duplicate_sheet_handler(drive_service, sheets_service, spreadsheet_name, source_sheet_name, new_sheet_name, insert_position)
 
 
 @mcp.tool()
 def rename_sheets_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_names: List[str] = Field(..., description="List of sheet names to rename"),
+    sheet_names: List[str] = Field(..., description="List of sheet names to rename (put only the names of the sheets you want to rename)"),
     new_titles: List[str] = Field(..., description="List of new titles for the sheets")
 ) -> str:
-    """Rename sheets in a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return rename_sheets_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_names=sheet_names,
-        new_titles=new_titles
-    )
-
-
-@mcp.tool()
-def read_sheet_data_tool(
-    spreadsheet_name: str = Field(..., description="The name of the spreadsheet"),
-    ranges: List[str] = Field(..., description="List of range strings (e.g., ['Sheet1!A1:B10', 'Sheet2!A:A'])"),
-    value_render_option: str = Field(default="FORMATTED_VALUE", description="How to render values: FORMATTED_VALUE, UNFORMATTED_VALUE, or FORMULA"),
-    date_time_render_option: str = Field(default="FORMATTED_STRING", description="How to render dates: SERIAL_NUMBER or FORMATTED_STRING")
-) -> str:
-    """Read data from multiple ranges in a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return read_sheet_data_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        ranges=ranges,
-        value_render_option=value_render_option,
-        date_time_render_option=date_time_render_option
-    )
-
-
-@mcp.tool()
-def get_sheet_metadata_tool(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="Name of the specific sheet to get detailed metadata for")
-) -> str:
-    """Get comprehensive metadata about a specific sheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    """
+    Rename sheets in a Google Spreadsheet.
     
-    return get_sheet_metadata_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name
-    )
-
-
-
-@mcp.tool()
-def insert_sheet_dimension(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet"),
-    dimension: str = Field(..., description="Dimension to insert: 'ROWS' or 'COLUMNS'"),
-    position: int = Field(..., description="Position to insert at (0-based)"),
-    count: int = Field(..., description="Number of rows/columns to insert")
-) -> str:
-    """Insert rows or columns in a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return insert_dimension_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        dimension=dimension,
-        position=position,
-        count=count
-    )
+    This tool allows you to rename multiple sheets within a Google Spreadsheet.
+    The operation is performed using the Google Sheets API batchUpdate method.
+    
+    Args:
+        spreadsheet_name: The name of the Google Spreadsheet
+        sheet_names: List of sheet names to rename
+        new_titles: List of new titles for the sheets
+    
+    Returns:
+        JSON string with success status and details about renamed sheets
+    """
+    return rename_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names, new_titles)
 
 
 @mcp.tool()
-def delete_sheet_dimension(
+def analyze_sheet_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet"),
-    dimension: str = Field(..., description="Dimension to delete: 'ROWS' or 'COLUMNS'"),
-    indices: List[int] = Field(..., description="List of row/column indices to delete (0-based)")
+    sheet_name: str = Field(..., description="Name of the specific sheet to analyze")
 ) -> str:
-    """Delete rows or columns from a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return delete_dimension(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        dimension=dimension,
-        indices=indices
-    )
+    """
+    Analyze a specific sheet's contents and structure.
+    
+    This tool provides detailed analysis of a sheet's contents, including:
+    - Data distribution and patterns
+    - Cell types and formatting
+    - Empty vs. filled cells
+    - Potential data structures
+    - Complexity assessment
+    
+    Args:
+        spreadsheet_name: The name of the Google Spreadsheet
+        sheet_name: Name of the specific sheet to analyze
+    
+    Returns:
+        JSON string with comprehensive analysis results
+    """
+    return analyze_sheet_handler(drive_service, sheets_service, spreadsheet_name, sheet_name)
 
 
-@mcp.tool()
-def move_sheet_dimension(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet"),
-    dimension: str = Field(..., description="Dimension to move: 'ROWS' or 'COLUMNS'"),
-    source_start_index: int = Field(..., description="Starting index to move (0-based)"),
-    source_end_index: int = Field(..., description="Ending index to move (0-based, exclusive)"),
-    destination_index: int = Field(..., description="Destination index (0-based)")
-) -> str:
-    """Move rows or columns in a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return move_dimension(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        dimension=dimension,
-        source_start_index=source_start_index,
-        source_end_index=source_end_index,
-        destination_index=destination_index
-    )
-
-
-@mcp.tool()
-def resize_columns(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet"),
-    column_indices: List[int] = Field(..., description="List of column indices to resize (0-based)"),
-    widths: List[int] = Field(..., description="List of widths in pixels for each column")
-) -> str:
-    """Resize columns in a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return resize_columns_data(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        column_indices=column_indices,
-        widths=widths
-    )
-
-
-@mcp.tool()
-def format_cells(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet"),
-    range_name: str = Field(..., description="Range to format (e.g., 'A1:B10')"),
-    format_type: str = Field(..., description="Type of formatting: 'TEXT', 'NUMBER', 'PERCENT', 'CURRENCY', 'DATE', 'TIME', 'DATETIME'"),
-    format_pattern: str = Field(default=None, description="Custom format pattern (optional)")
-) -> str:
-    """Format cells in a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return format_cells_data(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        range_name=range_name,
-        format_type=format_type,
-        format_pattern=format_pattern
-    )
-
-
-@mcp.tool()
-def conditional_format(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet"),
-    range_name: str = Field(..., description="Range to apply conditional formatting to (e.g., 'A1:B10')"),
-    condition_type: str = Field(..., description="Type of condition: 'NUMBER_GREATER', 'NUMBER_LESS', 'TEXT_CONTAINS', 'DATE_BEFORE', 'DATE_AFTER'"),
-    condition_value: str = Field(..., description="Value to compare against"),
-    format_color: str = Field(default="RED", description="Color for the format (e.g., 'RED', 'GREEN', 'BLUE')")
-) -> str:
-    """Apply conditional formatting to cells in a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return conditional_format_data(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        range_name=range_name,
-        condition_type=condition_type,
-        condition_value=condition_value,
-        format_color=format_color
-    )
-
-
-@mcp.tool()
-def merge_cells(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet"),
-    range_name: str = Field(..., description="Range to merge (e.g., 'A1:B2')"),
-    merge_type: str = Field(default="MERGE_ALL", description="Type of merge: 'MERGE_ALL', 'MERGE_COLUMNS', 'MERGE_ROWS'")
-) -> str:
-    """Merge cells in a Google Spreadsheet."""
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    return merge_cells_data(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        range_name=range_name,
-        merge_type=merge_type
-    )
-
-
-# =============================================================================
-# TABLE MANAGEMENT TOOLS
-# =============================================================================
-
+# Table Management Tools
 
 @mcp.tool()
 def create_table_tool(
@@ -455,76 +254,30 @@ def create_table_tool(
     table_name: str = Field(..., description="A descriptive name for the table (e.g., 'Project Tracker', 'Customer Data')"),
     start_cell: str = Field(..., description="Starting cell for the table (e.g., 'A1')"),
     column_names: List[str] = Field(..., description="List of column names (e.g., ['Employee Name', 'Age', 'Department', 'Salary'])"),
-    column_types: List[str] = Field(..., description="""List of column types corresponding to column_names. 
-    
-    SUPPORTED TYPES:
-    - TEXT: Regular text input (names, descriptions, notes)
-    - NUMBER: Numeric values (ages, scores, quantities) - formatted as #,##0.00
-    - DATE: Date values (birth dates, deadlines, timestamps)
-    - TIME: Time values (meeting times, durations) - formatted as hh:mm:ss
-    - DATE_TIME: Date and time values (meetings, events) - formatted as yyyy-mm-dd hh:mm:ss
-    - BOOLEAN: True/False values (yes/no, active status)
-    - PERCENT: Percentage values (completion rates, scores) - formatted as 0.00%
-    - CURRENCY: Currency values (prices, budgets, costs) - formatted as $#,##0.00
-    - DROPDOWN: Dropdown list with predefined options (use with dropdown_options parameter)
-    - NONE: Unspecified type (default formatting, no special validation)
-    
-    EXAMPLE: ['TEXT', 'NUMBER', 'DROPDOWN', 'CURRENCY'] for ['Employee Name', 'Age', 'Department', 'Salary']
-    """),
-    dropdown_columns: List[str] = Field(default=[], description="""List of column names that should have dropdown validation.
-    
-    EXAMPLE: ['Department', 'Status', 'Priority']
-    This will create dropdowns for columns named 'Department', 'Status', and 'Priority'.
-    """),
-    dropdown_values: List[str] = Field(default=[], description="""Comma-separated dropdown options for each dropdown column.
-    
-    EXAMPLE: ['HR,IT,Sales,Marketing', 'Active,Inactive,Pending', 'Low,Medium,High']
-    This provides options for the dropdown columns in the same order as dropdown_columns.
-    First dropdown (Department): HR, IT, Sales, Marketing
-    Second dropdown (Status): Active, Inactive, Pending  
-    Third dropdown (Priority): Low, Medium, High
-    """)
+    column_types: List[str] = Field(..., description="List of column types:  DOUBLE, CURRENCY, PERCENT, DATE, TIME, DATE_TIME, TEXT, BOOLEAN, DROPDOWN"),
+    dropdown_columns: List[str] = Field(default=[], description="List of column names that should have dropdown validation"),
+    dropdown_values: List[str] = Field(default=[], description="Comma-separated dropdown options for each dropdown column")
 ) -> str:
-    """Create a table in a Google Spreadsheet with headers only.
-    
-    This tool creates a structured table with proper column types, formatting, and validation rules.
-    Each column can have a specific data type and optional validation rules for dropdown lists.
-    
-    COLUMN TYPE EXAMPLES:
-    - TEXT: For names, descriptions, notes
-    - NUMBER: For ages, scores, quantities (formatted as #,##0.00)
-    - DATE: For dates, deadlines, timestamps
-    - BOOLEAN: For yes/no, true/false fields
-    - PERCENT: For percentages, completion rates (formatted as 0.00%)
-    - CURRENCY: For prices, budgets, costs (formatted as $#,##0.00)
-    
-    DROPDOWN VALIDATION:
-    Use dataValidationRule for columns that should have predefined options.
-    Example: Status column with options "Active", "Inactive", "Pending"
-    
-    TABLE FEATURES:
-    - Automatic column formatting based on type
-    - Data validation for dropdown columns
-    - Proper number formatting for numeric columns
-    - Clean table structure with headers
     """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    Create a new table in Google Sheets.
     
-    return add_table_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        table_name=table_name,
-        start_cell=start_cell,
-        column_names=column_names,
-        column_types=column_types,
-        dropdown_columns=dropdown_columns,
-        dropdown_values=dropdown_values
-    )
+    This tool creates a structured table with specified columns and data types.
+    Tables provide better data organization, validation, and formatting capabilities.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet to create table in
+        table_name: Name for the table
+        start_cell: Starting cell for the table (e.g., "A1")
+        column_names: List of column names
+        column_types: List of column types corresponding to column_names
+        dropdown_columns: List of column names that should have dropdown validation
+        dropdown_values: List of comma-separated dropdown options for each dropdown column
+    
+    Returns:
+        JSON string with success status and table details
+    """
+    return create_table_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, start_cell, column_names, column_types, dropdown_columns, dropdown_values)
 
 
 @mcp.tool()
@@ -533,25 +286,21 @@ def delete_table_tool(
     sheet_name: str = Field(..., description="The name of the sheet containing the tables"),
     table_names: List[str] = Field(..., description="List of table names to delete (e.g., ['Project Tracker', 'Customer Data', 'Sales Report'])")
 ) -> str:
-    """Delete one or more tables from a Google Spreadsheet.
-    
-    Removes table structures while preserving underlying data. Supports batch deletion
-    of multiple tables in a single operation for efficiency.
-    
-    USAGE: table_names=["Project Tracker"] or ["Table1", "Table2", "Table3"]
     """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    Delete tables from Google Sheets.
     
-    return delete_table_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        table_names=table_names
-    )
+    This tool removes specified tables from a sheet while preserving other content.
+    The table structure and data will be permanently deleted.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the tables
+        table_names: List of table names to delete
+    
+    Returns:
+        JSON string with success status and deletion details
+    """
+    return delete_table_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_names)
 
 
 @mcp.tool()
@@ -561,26 +310,45 @@ def rename_table_tool(
     old_table_name: str = Field(..., description="Current name of the table to rename"),
     new_table_name: str = Field(..., description="New name for the table")
 ) -> str:
-    """Rename a table in a Google Spreadsheet.
-    
-    Changes the table name while preserving all data, structure, and formatting.
-    The new name must be unique within the sheet.
-    
-    USAGE: old_table_name="Project Tracker", new_table_name="Updated Project Tracker"
     """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    Rename a table in Google Sheets.
     
-    return rename_table_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        old_table_name=old_table_name,
-        new_table_name=new_table_name
-    )
+    This tool allows you to change the name of an existing table.
+    The table structure and data remain unchanged.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        old_table_name: Current name of the table
+        new_table_name: New name for the table
+    
+    Returns:
+        JSON string with success status and rename details
+    """
+    return rename_table_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, old_table_name, new_table_name)
+
+
+@mcp.tool()
+def get_table_metadata_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(default=None, description="Name of the table to get metadata for. If not provided, returns metadata for all tables in the sheet.")
+) -> str:
+    """
+    Get comprehensive metadata for tables in Google Sheets.
+    
+    This tool provides detailed information about table structure, columns, data types,
+    and other properties. If no table name is provided, returns metadata for all tables.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to get metadata for (optional)
+    
+    Returns:
+        JSON string containing table metadata or list of all tables
+    """
+    return get_table_metadata_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name)
 
 
 @mcp.tool()
@@ -589,61 +357,330 @@ def add_table_column_tool(
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
     table_name: str = Field(..., description="Name of the table to add columns to"),
     column_names: List[str] = Field(..., description="List of column names (e.g., ['Status', 'Priority', 'Notes'])"),
-    column_types: List[str] = Field(..., description="""List of column types corresponding to column_names.
+    column_types: List[str] = Field(..., description="List of column types: DOUBLE, CURRENCY, PERCENT, DATE, TIME, DATE_TIME, TEXT, BOOLEAN, DROPDOWN"),
+    positions: List[int] = Field(default=[], description="List of positions to insert columns (0-based index, empty list for end)"),
+    dropdown_columns: List[str] = Field(default=[], description="List of column names that should have dropdown validation"),
+    dropdown_values: List[str] = Field(default=[], description="Comma-separated dropdown options for each dropdown column")
+) -> str:
+    """
+    Add new columns to an existing table in Google Sheets.
     
-    SUPPORTED TYPES:
-    - TEXT: Regular text input (names, descriptions, notes)
-    - NUMBER: Numeric values (ages, scores, quantities) - formatted as #,##0.00
-    - DATE: Date values (birth dates, deadlines, timestamps)
-    - TIME: Time values (meeting times, durations) - formatted as hh:mm:ss
-    - DATE_TIME: Date and time values (meetings, events) - formatted as yyyy-mm-dd hh:mm:ss
-    - BOOLEAN: True/False values (yes/no, active status)
-    - PERCENT: Percentage values (completion rates, scores) - formatted as 0.00%
-    - CURRENCY: Currency values (prices, budgets, costs) - formatted as $#,##0.00
-    - DROPDOWN: Dropdown list with predefined options (use with dropdown_columns parameter)
-    - NONE: Unspecified type (default formatting, no special validation)
+    This tool extends an existing table with additional columns.
+    New columns can have different data types and validation rules.
+    Supports adding multiple columns at once with proper positioning.
     
-    EXAMPLE: ['TEXT', 'NUMBER', 'DROPDOWN'] for ['Status', 'Priority', 'Department']
-    """),
-    positions: List[int] = Field(..., description="List of positions to insert columns (0-based index, None for end)"),
-    dropdown_columns: List[str] = Field(default=[], description="""List of column names that should have dropdown validation.
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to add columns to
+        column_names: List of column names to add
+        column_types: List of column types corresponding to column_names
+        positions: List of positions to insert columns (0-based index, empty list for end)
+        dropdown_columns: List of column names that should have dropdown validation
+        dropdown_values: List of comma-separated dropdown options for each dropdown column
     
-    EXAMPLE: ['Department', 'Status', 'Priority']
-    This will create dropdowns for columns named 'Department', 'Status', and 'Priority'.
-    """),
-    dropdown_values: List[str] = Field(default=[], description="""Comma-separated dropdown options for each dropdown column.
+    Returns:
+        JSON string with success status and column addition details
+    """
+    return add_table_column_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_names, column_types, positions, dropdown_columns, dropdown_values)
+
+
+@mcp.tool()
+def sort_table_by_columns_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to sort"),
+    column_name: str = Field(..., description="Name of the column to sort by"),
+    sort_order: str = Field(default="ASCENDING", description="Sort order: 'ASCENDING' or 'DESCENDING' (default: 'ASCENDING')")
+) -> str:
+    """
+    Sort a table by a specific column.
     
-    EXAMPLE: ['HR,IT,Sales,Marketing', 'Active,Inactive,Pending', 'Low,Medium,High']
-    This provides options for the dropdown columns in the same order as dropdown_columns.
-    First dropdown (Department): HR, IT, Sales, Marketing
-    Second dropdown (Status): Active, Inactive, Pending  
-    Third dropdown (Priority): Low, Medium, High
+    This tool sorts all data rows in a table based on a specified column.
+    The header row remains in place, and data rows are reordered.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to sort
+        column_name: Name of the column to sort by
+        sort_order: Sort order - "ASCENDING" or "DESCENDING" (default: "ASCENDING")
+    
+    Returns:
+        JSON string with success status and sorting details
+    """
+    return sort_table_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_name, sort_order)
+
+
+@mcp.tool()
+def clear_table_data_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to clear data from")
+) -> str:
+    """
+    Clear all data from a table while preserving the table structure.
+    
+    This tool removes all data rows from a table while keeping the table structure,
+    column definitions, and formatting intact.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to clear data from
+    
+    Returns:
+        JSON string with success status and clearing details
+    """
+    return clear_table_data_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name)
+
+
+@mcp.tool()
+def delete_table_records_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to delete records from"),
+    row_indices: List[int] = Field(..., description="List of row indices to delete (1-based, excluding header)")
+) -> str:
+    """
+    Delete specific records (rows) from a table.
+    
+    This tool removes specific records from a table while preserving the table structure.
+    Row indices are 1-based and exclude the header row.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to delete records from
+        row_indices: List of row indices to delete (1-based, excluding header)
+    
+    Returns:
+        JSON string with success status and deletion details
+    """
+    return delete_table_records_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, row_indices)
+
+
+@mcp.tool()
+def get_table_rows_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to get rows from"),
+    start_row: int = Field(..., description="Starting row index (1-based, excluding header)"),
+    end_row: int = Field(..., description="Ending row index (1-based, excluding header)"),
+    include_headers: bool = Field(default=False, description="Whether to include header row in results (default: False)")
+) -> str:
+    """
+    Retrieve rows from a table.
+    
+    This tool retrieves data rows from a table with optional filtering.
+    You can specify a row range and choose whether to include headers.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to get rows from
+        start_row: Starting row index (1-based, excluding header)
+        end_row: Ending row index (1-based, excluding header)
+        include_headers: Whether to include header row in results (default: False)
+    
+    Returns:
+        JSON string with table rows data and metadata
+    """
+    return get_table_rows_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, start_row, end_row, include_headers)
+
+
+@mcp.tool()
+def update_table_row_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to update"),
+    row_index: int = Field(..., description="Row index to update (1-based, excluding header)"),
+    data: List[Union[str, int, float, bool, None]] = Field(..., description="""List of values for the entire row.
+    
+    Must match the number of columns in the table.
+    Values can be strings, numbers, booleans, or None.
+    EXAMPLE: ['John Doe', 30, 'HR', 50000]
     """)
 ) -> str:
-    """Add new columns to an existing table in Google Sheets.
-    
-    Adds columns with specified types, formatting, and optional dropdown validation.
-    The columns can be inserted at specific positions or added at the end.
-    
-    USAGE: Add status and priority columns with dropdown options to project tracker table
     """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    Update an entire row in a table.
     
-    return add_table_column_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        table_name=table_name,
-        column_names=column_names,
-        column_types=column_types,
-        positions=positions,
-        dropdown_columns=dropdown_columns,
-        dropdown_values=dropdown_values
-    )
+    This tool updates all cells in a specific row with new values.
+    The data must match the number of columns in the table.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to update
+        row_index: Row index to update (1-based, excluding header)
+        data: List of values for the entire row
+    
+    Returns:
+        JSON string with success status and update details
+    """
+    return update_table_row_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, row_index, data)
+
+
+# @mcp.tool()
+# def update_table_cells_tool(
+#     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+#     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+#     table_name: str = Field(..., description="Name of the table to update"),
+#     cell_updates: List[Dict[str, Union[str, int, float, bool, None]]] = Field(..., description="""List of cell updates, each containing:
+#     - row_index: Row index (1-based, excluding header)
+#     - column_index: Column index (1-based)
+#     - value: New value for the cell (string, number, boolean, or None)
+    
+#     For single cell: [{"row_index": 1, "column_index": 2, "value": "New Value"}]
+#     For multiple cells: [{"row_index": 1, "column_index": 2, "value": "Value1"}, {"row_index": 2, "column_index": 3, "value": 50000}]
+#     """)
+# ) -> str:
+#     """
+#     Update single or multiple cells in a table.
+    
+#     This tool updates specific cells in a table with new values.
+#     Can handle both single cell updates and batch cell updates efficiently.
+#     Each cell update must specify row index, column index, and new value.
+    
+#     Args:
+#         spreadsheet_name: Name of the spreadsheet
+#         sheet_name: Name of the sheet containing the table
+#         table_name: Name of the table to update
+#         cell_updates: List of cell updates with row_index, column_index, and value
+    
+#     Returns:
+#         JSON string with success status and update details
+#     """
+#     return update_table_cells_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, cell_updates)
+
+
+# @mcp.tool()
+# def find_table_cells_tool(
+#     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+#     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+#     table_name: str = Field(..., description="Name of the table to search in"),
+#     search_value: Union[str, int, float, bool] = Field(..., description="Value to search for"),
+#     search_type: str = Field(default="exact", description="Type of search: 'exact', 'contains', 'starts_with', 'ends_with' (default: 'exact')"),
+#     case_sensitive: bool = Field(default=False, description="Whether search should be case sensitive (default: False)"),
+#     include_headers: bool = Field(default=False, description="Whether to include header row in search (default: False)")
+# ) -> str:
+#     """
+#     Find specific values in table cells.
+    
+#     This tool searches for values in table cells using various search methods.
+#     You can search for exact matches, partial matches, or pattern matches.
+    
+#     Args:
+#         spreadsheet_name: Name of the spreadsheet
+#         sheet_name: Name of the sheet containing the table
+#         table_name: Name of the table to search in
+#         search_value: Value to search for
+#         search_type: Type of search - "exact", "contains", "starts_with", "ends_with"
+#         case_sensitive: Whether search should be case sensitive
+#         include_headers: Whether to include header row in search
+    
+#     Returns:
+#         JSON string with found cells data and metadata
+#     """
+#     return find_table_cells_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, search_value, search_type, case_sensitive, include_headers)
+
+
+@mcp.tool()
+def rename_table_column_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to rename columns in"),
+    column_indices: List[int] = Field(..., description="List of column indices to rename (0-based)"),
+    new_column_names: List[str] = Field(..., description="List of new column names (must match column_indices count)")
+) -> str:
+    """
+    Rename columns in a table.
+    
+    This tool renames existing columns in a table by their index.
+    The number of column indices must match the number of new column names.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to rename columns in
+        column_indices: List of column indices to rename (0-based)
+        new_column_names: List of new column names
+    
+    Returns:
+        JSON string with success status and rename details
+    """
+    return rename_table_column_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_indices, new_column_names)
+
+
+
+
+
+@mcp.tool()
+def change_table_column_type_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to change column types in"),
+    column_names: List[str] = Field(..., description="List of column names to change types for"),
+    new_column_types: List[str] = Field(..., description="List of new column types (must match column_names count)")
+) -> str:
+    """
+    Change column types in a table.
+    
+    This tool changes the data type of existing columns in a table.
+    The number of column names must match the number of new column types.
+    
+    Available column types:
+    - DOUBLE: Numeric data with decimals
+    - CURRENCY: Monetary values ($#,##0.00)
+    - PERCENT: Percentage values (0.00%)
+    - DATE: Date values (yyyy-mm-dd)
+    - TIME: Time values (hh:mm:ss)
+    - DATE_TIME: Date and time values
+    - TEXT: Plain text data
+    - BOOLEAN: True/false values
+    - DROPDOWN: Selection from predefined options
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to change column types in
+        column_names: List of column names to change types for
+        new_column_types: List of new column types
+    
+    Returns:
+        JSON string with success status and type change details
+    """
+    return change_table_column_type_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_names, new_column_types)
+
+
+@mcp.tool()
+def manage_dropdown_options_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to manage dropdown options in"),
+    action: str = Field(..., description="Action to perform: 'add' or 'remove'"),
+    column_names: List[str] = Field(..., description="List of column names to manage dropdown options for"),
+    dropdown_options: Optional[List[List[str]]] = Field(default=None, description="List of dropdown options to add/remove for each column (required for 'add' and 'remove' actions)")
+) -> str:
+    """
+    Manage dropdown options in table columns.
+    
+    This tool can add or remove specific dropdown options from existing columns in a table.
+    For 'add' action: Adds new options to existing dropdown (preserves existing options).
+    For 'remove' action: Removes specific options from existing dropdown.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to manage dropdown options in
+        action: Action to perform - "add" or "remove"
+        column_names: List of column names to manage dropdown options for
+        dropdown_options: List of dropdown options to add/remove for each column
+    
+    Returns:
+        JSON string with success status and dropdown management details
+    """
+    return manage_dropdown_options_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, action, column_names, dropdown_options)
 
 
 @mcp.tool()
@@ -651,203 +688,69 @@ def delete_table_column_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
     table_name: str = Field(..., description="Name of the table to delete columns from"),
-    column_names: List[str] = Field(..., description="List of column names to delete (e.g., ['Status', 'Priority', 'Notes']). Pass the actual column names, not positions or indices.")
+    column_names: List[str] = Field(..., description="List of column names to delete from the table")
 ) -> str:
-    """Delete columns from an existing table in Google Sheets.
-    
-    Removes specified columns from a table while preserving the remaining structure.
-    Cannot delete all columns - at least one column must remain in the table.
-    
-    USAGE: Delete status and priority columns from project tracker table
     """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    Delete specific columns from a table in Google Sheets.
     
+    This tool removes the specified columns from the table and updates the table structure
+    accordingly. The remaining columns will be shifted left to fill the gaps.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to delete columns from
+        column_names: List of column names to delete
+    
+    Returns:
+        JSON string with operation results
+    """
     return delete_table_column_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        table_name=table_name,
-        column_names=column_names
+        drive_service,
+        sheets_service,
+        spreadsheet_name,
+        sheet_name,
+        table_name,
+        column_names
     )
 
 
-@mcp.tool()
-def modify_column_properties_tool(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table containing the column"),
-    column_name: str = Field(..., description="Name of the column to change"),
-    new_column_name: str = Field(default="", description="New name for the column else must pass empty string"),
-    new_column_type: str = Field(default="", description="""New type for the column else must pass empty string.
-    
-    SUPPORTED TYPES:
-    - TEXT: Regular text input (names, descriptions, notes)
-    - NUMBER: Numeric values (ages, scores, quantities) - formatted as #,##0.00
-    - DATE: Date values (birth dates, deadlines, timestamps)
-    - TIME: Time values (meeting times, durations) - formatted as hh:mm:ss
-    - DATE_TIME: Date and time values (meetings, events) - formatted as yyyy-mm-dd hh:mm:ss
-    - BOOLEAN: True/False values (yes/no, active status)
-    - PERCENT: Percentage values (completion rates, scores) - formatted as 0.00%
-    - CURRENCY: Currency values (prices, budgets, costs) - formatted as $#,##0.00
-    - DROPDOWN: Dropdown list with predefined options
-    - NONE: Unspecified type (default formatting, no special validation)
-    """),
-    new_dropdown_options: List[str] = Field(default=[], description="New dropdown options else must pass empty list (e.g., ['Active', 'Inactive', 'Pending'])"),
-    remove_dropdown: bool = Field(default=False, description="Whether to remove dropdown validation (default: False)"),
-    add_dropdown_options: List[str] = Field(default=[], description="Options to add to existing dropdown else must pass empty list (e.g., ['New Option 1', 'New Option 2'])"),
-    remove_dropdown_options: List[str] = Field(default=[], description="Specific options to remove from dropdown else must pass empty list (e.g., ['Old Option 1', 'Old Option 2'])")
-) -> str:
-    """Modify properties of an existing column in a table in Google Sheets.
-    
-    Allows changing column name, type, dropdown options, or removing dropdown validation.
-    At least one property must be specified for change.
-    
-    USAGE: Modify column name, type, or dropdown options
-    """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return modify_column_properties_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        table_name=table_name,
-        column_name=column_name,
-        new_column_name=new_column_name,
-        new_column_type=new_column_type,
-        new_dropdown_options=new_dropdown_options,
-        remove_dropdown=remove_dropdown,
-        add_dropdown_options=add_dropdown_options,
-        remove_dropdown_options=remove_dropdown_options
-    )
 
 
 @mcp.tool()
-def get_table_metadata_tool(
+def insert_table_records_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to get metadata for")
-) -> str:
-    """Get comprehensive metadata for a specific table in Google Sheets.
+    table_name: str = Field(..., description="Name of the table to insert records into"),
+    records: List[List[Union[str, int, float, bool, None]]] = Field(..., description="""List of records to insert into the table.
     
-    Retrieves detailed information about a table including:
-    - Table ID and name
-    - Dimensions (row count, column count)
-    - Range boundaries (start/end row/column indices)
-    - Range notation in A1 format
-    - Associated spreadsheet and sheet information
+    Each record must be a list of values matching the table's column structure.
+    Values can be strings, numbers, booleans, or None.
     
-    USAGE: Get metadata for "Project Tracker" table in "Sheet1" of "My Spreadsheet"
-    """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return get_table_metadata_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        table_name=table_name
-    )
-
-
-@mcp.tool()
-def manage_table_records_tool(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to modify"),
-    operation: str = Field(..., description="""Type of operation to perform:
-    
-    - append: Add rows at the end of the table
-    - insert: Insert rows at a specific position
-    - remove: Remove specific rows from the table
-    """),
-    data: List[List[str]] = Field(default=[], description="""List of rows to add/insert (for append/insert operations).
-    
-    Each row should be a list of string values corresponding to the table columns.
-    EXAMPLE: [['John Doe', '30', 'HR', '50000'], ['Jane Smith', '25', 'IT', '60000']]
-    """),
-    row_index: int = Field(default=None, description="Row index for insert operation (0-based for data rows only, header row is excluded)"),
-    row_indices: List[int] = Field(default=[], description="List of row indices to remove (0-based for data rows only, header row is excluded)")
-) -> str:
-    """Manage records in a table in Google Sheets.
-    
-    Allows appending, inserting, or removing rows from existing tables.
-    
-    USAGE: 
-    - Append new employee records to table
-    - Insert records at specific positions
-    - Remove outdated or duplicate records
-    """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    
-    return modify_table_data_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        table_name=table_name,
-        operation=operation,
-        data=data,
-        row_index=row_index,
-        row_indices=row_indices
-    )
-
-
-@mcp.tool()
-def modify_cell_data_tool(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to modify"),
-    cell_locations: List[str] = Field(..., description="""List of cell locations to update (e.g., ['A2', 'B3', 'C1']).
-    
-    Use standard Excel notation: A1, B2, C3, etc.
-    Row numbers start from 1 (not 0-based).
-    """),
-    cell_values: List[str] = Field(..., description="""List of new values for the cells (e.g., ['New Name', '42', 'Updated Value']).
-    
-    Must have the same number of values as cell_locations.
+    EXAMPLE: [
+        ['John Doe', 30, 'HR', 50000],
+        ['Jane Smith', 25, 'Engineering', 60000],
+        ['Bob Johnson', 35, 'Marketing', 55000]
+    ]
     """)
 ) -> str:
-    """Modify specific cells in a table in Google Sheets.
-    
-    Allows updating individual cells or multiple cells in a table.
-    
-    USAGE: Update specific cell values without affecting other data
     """
-    if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
-    if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+    Insert records (rows) into a table in Google Sheets at the end.
     
-    return modify_cell_data_handler(
-        drive_service=drive_service,
-        sheets_service=sheets_service,
-        spreadsheet_name=spreadsheet_name,
-        sheet_name=sheet_name,
-        table_name=table_name,
-        cell_locations=cell_locations,
-        cell_values=cell_values
-    )
-
-
-# =============================================================================
-# OTHERS
-# =============================================================================
-
-# No additional tools in this category currently
+    This tool inserts new records into a table at the end using InsertRangeRequest,
+    UpdateCellsRequest, and UpdateTableRequest operations. Each record must match the table's column structure.
+    Records are automatically formatted according to column types.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to insert records into
+        records: List of records, where each record is a list of values matching table columns
+    
+    Returns:
+        JSON string with success status and operation details
+    """
+    return insert_table_records_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, records)
 
 
 if __name__ == "__main__":

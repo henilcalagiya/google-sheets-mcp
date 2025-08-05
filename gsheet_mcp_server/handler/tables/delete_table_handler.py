@@ -1,13 +1,12 @@
 """Handler for deleting tables from Google Sheets."""
 
-from typing import List, Any, Dict
+from typing import List, Dict, Any
 from googleapiclient.errors import HttpError
-import re
+
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 from gsheet_mcp_server.helper.sheets_utils import get_sheet_ids_by_names
 from gsheet_mcp_server.helper.tables_utils import get_table_ids_by_names
 from gsheet_mcp_server.helper.json_utils import compact_json_response
-
 
 def delete_table_handler(
     drive_service,
@@ -17,7 +16,7 @@ def delete_table_handler(
     table_names: List[str]
 ) -> str:
     """
-    Delete one or more tables from a Google Spreadsheet.
+    Delete tables from Google Sheets.
     
     Args:
         drive_service: Google Drive service instance
@@ -27,7 +26,7 @@ def delete_table_handler(
         table_names: List of table names to delete
     
     Returns:
-        str: Success message with table details
+        str: Success message with deletion details
     """
     try:
         # Validate inputs
@@ -37,23 +36,56 @@ def delete_table_handler(
                 "message": "At least one table name is required."
             })
         
-        # Validate each table name
+        # Validate table names
+        validated_table_names = []
+        invalid_table_names = []
+        
         for table_name in table_names:
             if not table_name or table_name.strip() == "":
-                return compact_json_response({
-                    "success": False,
-                    "message": "All table names must be non-empty."
-                })
+                invalid_table_names.append({"name": table_name, "error": "Table name cannot be empty"})
+                continue
+            
+            validated_name = table_name.strip()
+            validated_table_names.append(validated_name)
         
-        # Get spreadsheet ID using utility function
+        if invalid_table_names:
+            error_messages = [f"'{item['name']}': {item['error']}" for item in invalid_table_names]
+            return compact_json_response({
+                "success": False,
+                "message": f"Invalid table names: {'; '.join(error_messages)}",
+                "invalid_table_names": invalid_table_names
+            })
+        
+        if not validated_table_names:
+            return compact_json_response({
+                "success": False,
+                "message": "No valid table names provided after validation."
+            })
+        
+        # Check for duplicate table names in the list
+        seen_names = set()
+        duplicate_names = []
+        for table_name in validated_table_names:
+            if table_name in seen_names:
+                duplicate_names.append(table_name)
+            else:
+                seen_names.add(table_name)
+        
+        if duplicate_names:
+            return compact_json_response({
+                "success": False,
+                "message": f"Duplicate table names in list: {', '.join(duplicate_names)}"
+            })
+        
+        # Get spreadsheet ID
         spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
         if not spreadsheet_id:
             return compact_json_response({
                 "success": False,
                 "message": f"Spreadsheet '{spreadsheet_name}' not found."
             })
-
-        # Get sheet ID using utility function
+        
+        # Get sheet ID
         sheet_ids = get_sheet_ids_by_names(sheets_service, spreadsheet_id, [sheet_name])
         sheet_id = sheet_ids.get(sheet_name)
         if sheet_id is None:
@@ -61,74 +93,71 @@ def delete_table_handler(
                 "success": False,
                 "message": f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'."
             })
-        # Collect all delete requests
-        delete_requests = []
-        deleted_tables = []
-        failed_tables = []
         
-        for table_name in table_names:
-            # Get table ID using the table name
-            table_ids = get_table_ids_by_names(sheets_service, spreadsheet_id, sheet_name, [table_name])
+        # Get table IDs
+        table_ids = get_table_ids_by_names(sheets_service, spreadsheet_id, sheet_name, validated_table_names)
+        
+        # Filter out tables that don't exist
+        existing_table_ids = []
+        existing_table_names = []
+        non_existent_tables = []
+        
+        for table_name in validated_table_names:
             table_id = table_ids.get(table_name)
-            if not table_id:
-                failed_tables.append(table_name)
-                continue
-            
-            # Create delete table request
-            delete_request = {
+            if table_id is not None:
+                existing_table_ids.append(table_id)
+                existing_table_names.append(table_name)
+            else:
+                non_existent_tables.append(table_name)
+        
+        if not existing_table_ids:
+            return compact_json_response({
+                "success": False,
+                "message": "No valid tables found to delete."
+            })
+        
+        # Create delete requests
+        delete_requests = []
+        for table_id in existing_table_ids:
+            delete_requests.append({
                 "deleteTable": {
                     "tableId": table_id
                 }
-            }
-            delete_requests.append(delete_request)
-            deleted_tables.append(table_name)
-        
-        # If no tables could be deleted, return error
-        if len(deleted_tables) == 0:
-            failed_list = ", ".join(failed_tables)
-            return compact_json_response({
-                "success": False,
-                "message": f"No tables could be deleted. Failed tables: {failed_list}"
             })
         
-        # Prepare batch update request
-        batch_request = {
-            "requests": delete_requests
-        }
-        
-        # Execute batch update
-        sheets_service.spreadsheets().batchUpdate(
+        # Execute batch delete
+        response = sheets_service.spreadsheets().batchUpdate(
             spreadsheetId=spreadsheet_id,
-            body=batch_request
+            body={"requests": delete_requests}
         ).execute()
         
-        # Prepare success message
-        success_message = f"Successfully deleted {len(deleted_tables)} table(s) from sheet '{sheet_name}' in spreadsheet '{spreadsheet_name}': {', '.join(deleted_tables)}"
+        # Extract response information
+        replies = response.get("replies", [])
+        deleted_count = len(replies)
         
-        # Add information about failed tables if any
-        if failed_tables:
-            failed_list = ", ".join(failed_tables)
-            success_message += f"\nFailed to delete: {failed_list}"
-        
-        return compact_json_response({
+        response_data = {
             "success": True,
-            "message": success_message,
-            "data": {
-                "deleted_tables": deleted_tables,
-                "failed_tables": failed_tables,
-                "sheet_name": sheet_name,
-                "spreadsheet_name": spreadsheet_name
-            }
-        })
+            "spreadsheet_name": spreadsheet_name,
+            "sheet_name": sheet_name,
+            "deleted_table_names": existing_table_names,
+            "tables_deleted": deleted_count,
+            "message": f"Successfully deleted {deleted_count} table(s) from '{sheet_name}'"
+        }
+        
+        # Add information about non-existent tables
+        if non_existent_tables:
+            response_data["non_existent_tables"] = non_existent_tables
+            response_data["message"] += f" (Skipped {len(non_existent_tables)} non-existent table(s))"
+        
+        return compact_json_response(response_data)
         
     except HttpError as error:
         return compact_json_response({
             "success": False,
-            "message": f"Error deleting tables: {error}"
+            "message": f"Google Sheets API error: {str(error)}"
         })
     except Exception as e:
         return compact_json_response({
             "success": False,
-            "message": f"Unexpected error: {str(e)}"
-        })
-
+            "message": f"Error deleting tables: {str(e)}"
+        }) 

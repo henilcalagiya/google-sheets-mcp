@@ -1,1 +1,1 @@
-# Table management handlers 
+"""Table management handlers for Google Sheets MCP Server.""" 
