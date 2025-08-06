@@ -1,7 +1,7 @@
 # Google Sheets MCP Server Tools
 
 ## Spreadsheet Management Tools
-1. `discover_spreadsheets_contents_tool` - Discover and analyze all contents within spreadsheets
+1. `list_spreadsheets_and_sheets_tool` - List spreadsheets and their sheet names
 2. `rename_spreadsheet_title_tool` - Rename a Google Spreadsheet
 
 ## Sheet Management Tools

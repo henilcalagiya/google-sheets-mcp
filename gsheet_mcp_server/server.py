@@ -19,7 +19,7 @@ from .models import SheetInfo
 
 # Local imports - Spreadsheet management handlers
 from .handler.spreadsheet.rename_spreadsheet_handler import rename_spreadsheet_handler
-from .handler.spreadsheet.discover_spreadsheets_contents_handler import discover_spreadsheets_contents_handler
+from .handler.spreadsheet.list_spreadsheets_and_sheets_handler import list_spreadsheets_and_sheets_handler
 
 # Local imports - Sheets handlers
 from .handler.sheets.add_sheets_handler import add_sheets_handler
@@ -94,22 +94,19 @@ sheets_service, drive_service = _setup_google_services(credentials_path)
 
 
 @mcp.tool()
-def discover_spreadsheets_contents_tool(
+def list_spreadsheets_and_sheets_tool(
     max_spreadsheets: int = Field(default=10, description="Maximum number of spreadsheets to analyze")
 ) -> str:
     """
-    Discover and analyze all contents within spreadsheets including tables, charts, and other elements.
-    
-    This tool provides a comprehensive overview of all spreadsheets accessible to the user,
-    including detailed information about their structure, contents, and metadata.
+    Discover spreadsheets and their sheet names.
     
     Args:
         max_spreadsheets: Maximum number of spreadsheets to analyze (default: 10)
     
     Returns:
-        JSON string containing detailed information about discovered spreadsheets
+        JSON string containing spreadsheet names and their sheet names
     """
-    return discover_spreadsheets_contents_handler(
+    return list_spreadsheets_and_sheets_handler(
         drive_service, sheets_service, max_spreadsheets
     )
 
