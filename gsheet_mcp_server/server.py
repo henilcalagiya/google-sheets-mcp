@@ -45,6 +45,11 @@ from .handler.tables.update_table_cells_handler import update_table_cells_handle
 from .handler.tables.find_table_cells_handler import find_table_cells_handler
 from .handler.tables.rename_table_column_handler import rename_table_column_handler
 from .handler.tables.change_table_column_type_handler import change_table_column_type_handler
+from .handler.tables.manage_column_properties_handler import manage_column_properties_handler
+from .handler.tables.toggle_table_footer_handler import toggle_table_footer_handler
+from .handler.tables.read_table_data_handler import read_table_data_handler
+from .handler.tables.get_table_data_by_columns_handler import get_table_data_by_columns_handler
+from .handler.tables.get_table_data_handler import get_table_data_handler
 from .handler.tables.manage_dropdown_options_handler import manage_dropdown_options_handler
 from .handler.tables.delete_table_column_handler import delete_table_column_handler
 
@@ -176,7 +181,7 @@ def delete_sheets_tool(
 def duplicate_sheet_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     source_sheet_name: str = Field(..., description="Name of the sheet to duplicate"),
-    new_sheet_name: str = Field(default=None, description="Name for the duplicated sheet (optional, will auto-generate if not provided)"),
+    new_sheet_name: str = Field(default="", description="Name for the duplicated sheet (optional, will auto-generate if not provided)"),
     insert_position: int = Field(default=None, description="Position to insert the duplicated sheet (1-based index, optional - will insert at end if not specified)")
 ) -> str:
     """
@@ -459,36 +464,6 @@ def delete_table_records_tool(
     """
     return delete_table_records_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, row_indices)
 
-
-@mcp.tool()
-def get_table_rows_tool(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to get rows from"),
-    start_row: int = Field(..., description="Starting row index (1-based, excluding header)"),
-    end_row: int = Field(..., description="Ending row index (1-based, excluding header)"),
-    include_headers: bool = Field(default=False, description="Whether to include header row in results (default: False)")
-) -> str:
-    """
-    Retrieve rows from a table.
-    
-    This tool retrieves data rows from a table with optional filtering.
-    You can specify a row range and choose whether to include headers.
-    
-    Args:
-        spreadsheet_name: Name of the spreadsheet
-        sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to get rows from
-        start_row: Starting row index (1-based, excluding header)
-        end_row: Ending row index (1-based, excluding header)
-        include_headers: Whether to include header row in results (default: False)
-    
-    Returns:
-        JSON string with table rows data and metadata
-    """
-    return get_table_rows_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, start_row, end_row, include_headers)
-
-
 @mcp.tool()
 def update_table_row_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
@@ -612,9 +587,6 @@ def rename_table_column_tool(
     return rename_table_column_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_indices, new_column_names)
 
 
-
-
-
 @mcp.tool()
 def change_table_column_type_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
@@ -653,6 +625,68 @@ def change_table_column_type_tool(
     return change_table_column_type_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_names, new_column_types)
 
 
+
+@mcp.tool()
+def toggle_table_footer_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to toggle footer for"),
+    action: str = Field(..., description="Action to perform: 'add' or 'remove'")
+) -> str:
+    """
+    Toggle table footer in Google Sheets.
+    
+    This tool can add or remove a footer row from a table by updating the table range.
+    Adding a footer extends the table by one row at the bottom.
+    Removing a footer reduces the table by one row from the bottom.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to toggle footer for
+        action: Action to perform - "add" or "remove"
+    
+    Returns:
+        JSON string with success status and toggle details
+    """
+    return toggle_table_footer_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, action)
+
+
+
+@mcp.tool()
+def get_table_data_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to read data from"),
+    column_names: List[str]  = Field(default=[], description="List of column names to retrieve (optional - if not provided, gets all columns)"),
+    start_row: int = Field(default=-1, description="Starting row index (0-based, optional, use -1 for all rows)"),
+    end_row: int = Field(default=-1, description="Ending row index (0-based, optional, use -1 for all rows)"),
+    include_headers: bool = Field(default=True, description="Whether to include header row in results"),
+    max_rows: int = Field(default=-1, description="Maximum number of rows to return (optional, use -1 for no limit)")
+) -> str:
+    """
+    Get table data with optional column filtering using Google Sheets API.
+    
+    This unified tool can retrieve all table data or specific columns based on user input.
+    If column_names is provided, it uses spreadsheets.values.get for efficiency.
+    If column_names is not provided, it uses spreadsheets.tables.get for full data.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to read data from
+        column_names: List of column names to retrieve (optional - if not provided, gets all columns)
+        start_row: Starting row index (0-based, optional)
+        end_row: Ending row index (0-based, optional)
+        include_headers: Whether to include header row in results
+        max_rows: Maximum number of rows to return (optional)
+    
+    Returns:
+        JSON string with table data and metadata
+    """
+    return get_table_data_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_names, start_row, end_row, include_headers, max_rows)
+
+
 @mcp.tool()
 def manage_dropdown_options_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
@@ -660,7 +694,7 @@ def manage_dropdown_options_tool(
     table_name: str = Field(..., description="Name of the table to manage dropdown options in"),
     action: str = Field(..., description="Action to perform: 'add' or 'remove'"),
     column_names: List[str] = Field(..., description="List of column names to manage dropdown options for"),
-    dropdown_options: Optional[List[List[str]]] = Field(default=None, description="List of dropdown options to add/remove for each column (required for 'add' and 'remove' actions)")
+    dropdown_options: Optional[List[List[str]]] = Field(default=[], description="List of dropdown options to add/remove for each column (required for 'add' and 'remove' actions)")
 ) -> str:
     """
     Manage dropdown options in table columns.
@@ -713,8 +747,6 @@ def delete_table_column_tool(
         table_name,
         column_names
     )
-
-
 
 
 @mcp.tool()
