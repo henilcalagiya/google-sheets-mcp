@@ -13,13 +13,35 @@ A Model Context Protocol (MCP) server that provides **23 powerful tools** for in
 
 ### Step 1: Get Google Credentials
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing one
-3. Enable **Google Sheets API** and **Google Drive API**
-4. Create a **Service Account** (recommended)
-5. Download the credentials JSON file
+**Follow these steps to get your Google credentials JSON file:**
 
-**💡 Need detailed instructions?** See our [Google Cloud Setup Guide](https://developers.google.com/sheets/api/quickstart/python)
+1. **Go to Google Cloud Console**
+   - Visit [Google Cloud Console](https://console.cloud.google.com/)
+   - Sign in with your Google account
+
+2. **Create or Select a Project**
+   - Click the project dropdown at the top left
+   - Click **"New Project"** or select an existing project
+   - If creating new: Enter a name and click **"Create"**
+
+3. **Enable Required APIs**
+   - In the left sidebar, click **"APIs & Services" > "Library"**
+   - Search for **"Google Sheets API"** → Click → **"Enable"**
+   - Search for **"Google Drive API"** → Click → **"Enable"**
+
+4. **Create a Service Account**
+   - Go to **"APIs & Services" > "Credentials"**
+   - Click **"Create Credentials"** → **"Service account"**
+   - Enter a name (e.g., `google-sheets-mcp`) → **"Create and Continue"**
+   - Click **"Continue"** → **"Done"**
+
+5. **Generate JSON Key**
+   - In the service accounts list, click your new service account email
+   - Go to **"Keys"** tab → **"Add Key"** → **"Create new key"**
+   - Choose **"JSON"** → **"Create"**
+   - The `.json` file will download automatically
+
+**💡 Keep this file safe!** You'll need its path for the next step.
 
 ### Step 2: Download, Setup & Configure
 
