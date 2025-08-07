@@ -7,16 +7,19 @@ A Model Context Protocol (MCP) server that provides **23 powerful tools** for in
 
 **📋 License:** Apache License 2.0  
 **🛠️ Available Tools:** 23 Google Sheets operations  
-**🚀 Quick Setup:** 2 steps to get started
+**🚀 Quick Setup:** 3 steps to get started
 
-## 🚀 Quick Start (2 Steps)
+## 🚀 Quick Start (3 Steps)
 
 ### Step 1: Get Google Credentials
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing one
 3. Enable **Google Sheets API** and **Google Drive API**
 4. Create a **Service Account** (recommended)
 5. Download the credentials JSON file
+
+**💡 Need detailed instructions?** See our [Google Cloud Setup Guide](https://developers.google.com/sheets/api/quickstart/python)
 
 ### Step 2: Download, Setup & Configure
 
@@ -30,55 +33,29 @@ A Model Context Protocol (MCP) server that provides **23 powerful tools** for in
 
 **For macOS/Linux:**
 ```bash
-# Clone the repository
+# Clone and setup
 git clone https://github.com/yourusername/gsheet-mcp-server.git
 cd gsheet-mcp-server
 
-# Install uv if not already installed
+# Install uv (if needed) and setup environment
 curl -LsSf https://astral.sh/uv/install.sh | sh
+uv venv && source .venv/bin/activate && uv sync
 
-# Setup with uv (automatic dependency management)
-uv venv
-source .venv/bin/activate
-uv sync
-
-# Complete setup in one go
+# Run auto setup
 python auto_setup.py
 ```
 
-**For Windows (Command Prompt):**
+**For Windows:**
 ```cmd
-# Clone the repository
+# Clone and setup
 git clone https://github.com/yourusername/gsheet-mcp-server.git
 cd gsheet-mcp-server
 
-# Install uv if not already installed
+# Install uv (if needed) and setup environment
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+uv venv && .venv\Scripts\activate && uv sync
 
-# Setup with uv (automatic dependency management)
-uv venv
-.venv\Scripts\activate
-uv sync
-
-# Complete setup in one go
-python auto_setup.py
-```
-
-**For Windows (PowerShell):**
-```powershell
-# Clone the repository
-git clone https://github.com/yourusername/gsheet-mcp-server.git
-cd gsheet-mcp-server
-
-# Install uv if not already installed
-irm https://astral.sh/uv/install.ps1 | iex
-
-# Setup with uv (automatic dependency management)
-uv venv
-.venv\Scripts\Activate.ps1
-uv sync
-
-# Complete setup in one go
+# Run auto setup
 python auto_setup.py
 ```
 
@@ -102,17 +79,45 @@ python auto_setup.py
 ============================================================
 ```
 
-#### **3. Clear Next Steps:**
-```
-📋 Next steps:
-1. Copy the configuration above to your MCP client
-2. Share your Google Sheets with the service account email
-3. Start using all Google Sheets tools!
-```
 
-**The auto-setup script handles everything automatically!**
+### Step 3: Connect MCP Client
 
-## 📋 What You Get
+**Copy the configuration to your MCP client:**
+
+**For Claude Desktop:**
+1. Open Claude Desktop settings
+2. Add the JSON configuration from your terminal or Desktop file
+3. Restart Claude Desktop
+
+**For Continue:**
+1. Open Continue settings
+2. Add the JSON configuration from your terminal or Desktop file
+3. Restart Continue
+
+**For Perplexity:**
+1. Open Perplexity settings
+2. Go to the "Connectors" section to connect the MCP
+3. Add the JSON configuration from your terminal or Desktop file
+4. Restart Perplexity
+
+**For other MCP clients:**
+1. Find your client's MCP configuration section
+2. Add the JSON configuration from your terminal or Desktop file
+3. Restart your MCP client
+
+**Share your Google Sheets:**
+- **Email:** Use the service account email shown in your terminal. You can also find this email in the Google Cloud Console where you created the API, or in the JSON file that was created on your Desktop.
+- **Permissions:** Give "Editor" access to your Google Sheets
+
+**🎉 You're all set!** Start using all 23 Google Sheets tools in your MCP client.
+
+## 📦 What's Included
+
+### **🎯 Complete Setup Package:**
+- **✅ Configuration file** on your Desktop
+- **✅ Complete JSON** in terminal for easy copying
+- **✅ 23 Google Sheets tools** ready to use
+- **✅ Cross-platform support** (macOS, Linux, Windows)
 
 ## 🛠️ Google Sheets Tools Overview
 
@@ -275,6 +280,8 @@ Here's a complete example of what your configuration should look like (automatic
 3. Copy the JSON configuration from terminal output
 4. Add to your MCP client configuration
 5. Share your Google Sheets with the service account email
+
+**🚀 Ready to supercharge your Google Sheets workflow with AI!**
 
 ## 📄 License
 
