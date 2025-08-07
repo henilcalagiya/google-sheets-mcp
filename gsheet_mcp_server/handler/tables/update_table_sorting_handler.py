@@ -11,17 +11,20 @@ from gsheet_mcp_server.helper.tables_utils import (
 )
 from gsheet_mcp_server.helper.json_utils import compact_json_response
 
-def sort_table_handler(
+def update_table_sorting_handler(
     drive_service,
     sheets_service,
     spreadsheet_name: str,
     sheet_name: str,
     table_name: str,
-    sort_columns: List[str],
-    sort_orders: List[str] = []
+    column_name: str,
+    sort_order: str = "ASC"
 ) -> str:
     """
-    Sort a table in Google Sheets using sortRange.
+    Apply basic filter sorting to a table in Google Sheets and then remove the filter.
+    
+    This function uses the setBasicFilter request to sort table data using the filter functionality,
+    then removes the filter to allow new records to be added.
     
     Args:
         drive_service: Google Drive service instance
@@ -29,8 +32,8 @@ def sort_table_handler(
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
         table_name: Name of the table to sort
-        sort_columns: List of column names to sort by (in order of priority)
-        sort_orders: List of sort orders ("ASCENDING" or "DESCENDING") for each column
+        column_name: Name of the column to sort by
+        sort_order: Sort order ("ASC" or "DESC")
     
     Returns:
         str: Success message with sort details or error message
@@ -43,28 +46,22 @@ def sort_table_handler(
                 "message": "Table name is required."
             })
         
-        if not sort_columns or len(sort_columns) == 0:
+        if not column_name or column_name.strip() == "":
             return compact_json_response({
                 "success": False,
-                "message": "At least one sort column is required."
+                "message": "Column name is required."
             })
         
-        # Validate sort orders if provided
-        if sort_orders and len(sort_orders) != len(sort_columns):
+        # Validate sort order
+        valid_orders = ["ASC", "DESC"]
+        if sort_order not in valid_orders:
             return compact_json_response({
                 "success": False,
-                "message": f"Number of sort orders ({len(sort_orders)}) must match number of sort columns ({len(sort_columns)})."
+                "message": f"Invalid sort order: {sort_order}. Valid orders are: {', '.join(valid_orders)}"
             })
         
-        # Validate sort orders
-        valid_orders = ["ASCENDING", "DESCENDING"]
-        if sort_orders:
-            invalid_orders = [order for order in sort_orders if order not in valid_orders]
-            if invalid_orders:
-                return compact_json_response({
-                    "success": False,
-                    "message": f"Invalid sort orders: {', '.join(invalid_orders)}. Valid orders are: {', '.join(valid_orders)}"
-                })
+        # Convert short names to Google Sheets API values
+        api_sort_order = "ASCENDING" if sort_order == "ASC" else "DESCENDING"
         
         # Get spreadsheet ID
         spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
@@ -112,75 +109,84 @@ def sort_table_handler(
         columns = table_info.get("columns", [])
         column_names = [col.get("name", "") for col in columns]
         
-        # Validate sort columns exist in table
-        missing_columns = []
-        for col_name in sort_columns:
-            if col_name not in column_names:
-                missing_columns.append(col_name)
-        
-        if missing_columns:
+        # Validate sort column exists in table
+        if column_name not in column_names:
             return compact_json_response({
                 "success": False,
-                "message": f"Sort columns not found in table: {', '.join(missing_columns)}. Available columns: {', '.join(column_names)}"
+                "message": f"Sort column '{column_name}' not found in table. Available columns: {', '.join(column_names)}"
             })
         
-        # Create sort specifications
-        sort_specs = []
-        for i, col_name in enumerate(sort_columns):
-            # Find column index
-            col_index = column_names.index(col_name)
-            
-            # Determine sort order
-            sort_order = "ASCENDING"  # Default
-            if i < len(sort_orders):
-                sort_order = sort_orders[i]
-            
-            sort_spec = {
-                "dimensionIndex": col_index,
-                "sortOrder": sort_order
-            }
-            sort_specs.append(sort_spec)
+        # Find column index
+        col_index = column_names.index(column_name)
         
-        # Create sortRange request according to official API documentation
-        # Note: We exclude the header row from sorting
-        sort_range_request = {
-            "sortRange": {
-                "range": {
-                    "sheetId": sheet_id,
-                    "startRowIndex": table_start_row + 1,  # Start after header
-                    "endRowIndex": table_end_row,
-                    "startColumnIndex": table_start_col,
-                    "endColumnIndex": table_end_col
-                },
-                "sortSpecs": sort_specs
+        # Create setBasicFilter request according to official API documentation
+        # This applies sorting using the filter functionality
+        set_basic_filter_request = {
+            "setBasicFilter": {
+                "filter": {
+                    "range": {
+                        "sheetId": sheet_id,
+                        "startRowIndex": table_start_row,
+                        "endRowIndex": table_end_row,
+                        "startColumnIndex": table_start_col,
+                        "endColumnIndex": table_end_col
+                    },
+                    "sortSpecs": [
+                        {
+                            "dimensionIndex": col_index,
+                            "sortOrder": api_sort_order
+                        }
+                    ]
+                }
             }
         }
         
-        # Execute the sortRange request
-        response = sheets_service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body={"requests": [sort_range_request]}
-        ).execute()
+        # Create clearBasicFilter request to remove the filter after sorting
+        clear_basic_filter_request = {
+            "clearBasicFilter": {
+                "sheetId": sheet_id
+            }
+        }
+        
+        # Execute both requests: first sort, then remove filter
+        try:
+            response = sheets_service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={"requests": [set_basic_filter_request, clear_basic_filter_request]}
+            ).execute()
+        except Exception as api_error:
+            return compact_json_response({
+                "success": False,
+                "message": f"API call failed: {str(api_error)}"
+            })
         
         # Extract response information
         replies = response.get("replies", [])
-        if replies and "sortRange" in replies[0]:
+        
+        # Debug: Log the response structure
+        print(f"Debug - Response keys: {list(response.keys())}")
+        print(f"Debug - Replies: {replies}")
+        
+        # Check if the request was successful (any reply means success)
+        if replies and len(replies) > 0:
             response_data = {
                 "success": True,
                 "spreadsheet_name": spreadsheet_name,
                 "sheet_name": sheet_name,
                 "table_name": table_name,
-                "sort_columns": sort_columns,
-                "sort_orders": sort_orders if sort_orders else ["ASCENDING"] * len(sort_columns),
-                "rows_sorted": table_end_row - table_start_row - 1,  # Exclude header
-                "message": f"Successfully sorted table '{table_name}' by {', '.join(sort_columns)} in '{sheet_name}'"
+                "table_id": table_id,
+                "sort_column": column_name,
+                "sort_order": sort_order,
+                "rows_sorted": table_end_row - table_start_row,
+                "filter_removed": True,
+                "message": f"Successfully sorted table '{table_name}' by '{column_name}' ({sort_order}) and removed filter in '{sheet_name}'"
             }
             
             return compact_json_response(response_data)
         else:
             return compact_json_response({
                 "success": False,
-                "message": "Failed to sort table - no response data from API"
+                "message": "Failed to apply sorting and remove filter - no response data from API"
             })
         
     except HttpError as error:
@@ -191,5 +197,5 @@ def sort_table_handler(
     except Exception as e:
         return compact_json_response({
             "success": False,
-            "message": f"Error sorting table: {str(e)}"
+            "message": f"Error applying sorting and removing filter: {str(e)}"
         }) 

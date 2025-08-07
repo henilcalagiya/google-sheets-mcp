@@ -36,7 +36,7 @@ from .handler.tables.get_table_metadata_handler import get_table_metadata_handle
 from .handler.tables.add_table_column_handler import add_table_column_handler
 
 
-from .handler.tables.sort_table_handler import sort_table_handler
+from .handler.tables.update_table_sorting_handler import update_table_sorting_handler
 from .handler.tables.clear_table_data_handler import clear_table_data_handler
 from .handler.tables.delete_table_records_handler import delete_table_records_handler
 from .handler.tables.get_table_rows_handler import get_table_rows_handler
@@ -381,15 +381,15 @@ def add_table_column_tool(
 
 
 @mcp.tool()
-def sort_table_by_columns_tool(
+def update_table_sorting_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
     table_name: str = Field(..., description="Name of the table to sort"),
     column_name: str = Field(..., description="Name of the column to sort by"),
-    sort_order: str = Field(default="ASCENDING", description="Sort order: 'ASCENDING' or 'DESCENDING' (default: 'ASCENDING')")
+    sort_order: str = Field(default="ASC", description="Sort order: 'ASC' or 'DESC' (default: 'ASC')")
 ) -> str:
     """
-    Sort a table by a specific column.
+    Update table sorting by a specific column.
     
     This tool sorts all data rows in a table based on a specified column.
     The header row remains in place, and data rows are reordered.
@@ -399,12 +399,12 @@ def sort_table_by_columns_tool(
         sheet_name: Name of the sheet containing the table
         table_name: Name of the table to sort
         column_name: Name of the column to sort by
-        sort_order: Sort order - "ASCENDING" or "DESCENDING" (default: "ASCENDING")
+        sort_order: Sort order - "ASC" or "DESC" (default: "ASC")
     
     Returns:
         JSON string with success status and sorting details
     """
-    return sort_table_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_name, sort_order)
+    return update_table_sorting_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_name, sort_order)
 
 
 @mcp.tool()
