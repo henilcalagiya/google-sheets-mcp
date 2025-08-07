@@ -24,10 +24,13 @@ chmod +x setup.sh
 
 ### Step 3: Configure & Use
 ```bash
-# Option 1: Use the helper script (recommended)
+# Option 1: Super simple auto-setup (recommended for non-technical users)
+python3 auto_setup.py
+
+# Option 2: Use the helper script
 python3 setup_config.py
 
-# Option 2: Manual setup
+# Option 3: Manual setup
 cp mcp_config_template.json mcp_config.json
 # Edit mcp_config.json with your Google credentials
 
@@ -36,6 +39,23 @@ python3 test_server.py
 
 # Add the JSON config to your MCP client and start using!
 ```
+
+## 🎯 For Non-Technical Users
+
+**Want the simplest possible setup?** Use the auto-setup script:
+
+```bash
+python3 auto_setup.py
+```
+
+This script will:
+- ✅ Ask for your Google credentials JSON file
+- ✅ Extract all the necessary information automatically
+- ✅ Create the configuration file for you
+- ✅ Test everything to make sure it works
+- ✅ Give you the exact steps to use it
+
+**See [ONE_CLICK_SETUP.md](ONE_CLICK_SETUP.md) for detailed non-technical instructions.**
 
 ## 📋 What You Get
 
