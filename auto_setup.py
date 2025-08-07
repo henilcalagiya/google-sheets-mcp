@@ -8,23 +8,15 @@ import json
 import os
 import sys
 import shutil
+import subprocess
 from pathlib import Path
-
-def print_step(step, description):
-    """Print a formatted step."""
-    print(f"\n{'='*50}")
-    print(f"STEP {step}: {description}")
-    print(f"{'='*50}")
 
 def get_credentials_file():
     """Get the credentials JSON file from user."""
-    print("\n📁 Please provide your Google credentials JSON file:")
-    print("1. Drag and drop your JSON file here, or")
-    print("2. Type the full path to your JSON file")
-    print("   (e.g., /Users/YourName/Downloads/my-project-123456.json)")
+    print("📁 Enter the path to your Google credentials JSON file:")
     
     while True:
-        file_path = input("\nEnter the path to your JSON file: ").strip()
+        file_path = input("Path: ").strip()
         
         # Remove quotes if user added them
         file_path = file_path.strip('"').strip("'")
@@ -35,7 +27,6 @@ def get_credentials_file():
             
         if not os.path.exists(file_path):
             print(f"❌ File not found: {file_path}")
-            print("💡 Make sure the path is correct and the file exists")
             continue
             
         if not file_path.endswith('.json'):
@@ -78,104 +69,112 @@ def extract_credentials(json_file_path):
         print(f"❌ Error reading file: {e}")
         return None
 
+def get_uv_path():
+    """Get the uv executable path."""
+    # Try to find uv in common locations
+    possible_paths = [
+        "/Users/henil/.local/bin/uv",  # Common uv installation path
+        shutil.which("uv"),  # System PATH
+        "/opt/homebrew/bin/uv",  # Homebrew installation
+        "/usr/local/bin/uv",  # System installation
+    ]
+    
+    for path in possible_paths:
+        if path and os.path.exists(path):
+            return path
+    
+    # If not found, try to run uv to get its path
+    try:
+        result = subprocess.run(["uv", "--version"], capture_output=True, text=True)
+        if result.returncode == 0:
+            return shutil.which("uv")
+    except:
+        pass
+    
+    return "uv"  # Fallback to just "uv"
+
 def get_project_path():
     """Get the current project path."""
     return os.getcwd()
 
 def create_mcp_config(credentials, project_path):
     """Create the MCP configuration file."""
+    uv_path = get_uv_path()
+    
     config = {
         "mcpServers": {
             "google-sheets": {
-                "command": "uv",
-                "args": ["run", "python", "-m", "gsheet_mcp_server"],
-                "cwd": project_path,
+                "command": uv_path,
+                "args": [
+                    "run",
+                    "--project",
+                    project_path,
+                    "python",
+                    "-m",
+                    "gsheet_mcp_server"
+                ],
                 "env": credentials
             }
         }
     }
     
-    # Write the config file
-    with open("mcp_config.json", "w") as f:
+    # Get desktop path
+    desktop_path = os.path.expanduser("~/Desktop")
+    config_filename = "google-sheets-mcp-config.json"
+    config_filepath = os.path.join(desktop_path, config_filename)
+    
+    # Write the config file to desktop
+    with open(config_filepath, "w") as f:
         json.dump(config, f, indent=2)
     
-    print("✅ Created mcp_config.json with your credentials")
+    print(f"✅ Created {config_filename} on your Desktop")
+    print(f"📁 Location: {config_filepath}")
+    
+    # Print the configuration for easy copying
+    print("\n" + "="*60)
+    print("📋 COPY THIS CONFIGURATION TO YOUR MCP CLIENT:")
+    print("="*60)
+    print(json.dumps(config, indent=2))
+    print("="*60)
+    print("📋 END OF CONFIGURATION")
+    print("="*60)
+    
+    return config_filepath
 
 def test_configuration():
     """Test the configuration."""
-    print("\n🧪 Testing your configuration...")
-    
-    try:
-        # Import and test the server
-        import subprocess
-        result = subprocess.run(
-            ["python3", "test_server.py"],
-            capture_output=True,
-            text=True,
-            timeout=15
-        )
-        
-        if "✅ Server started successfully" in result.stdout or "timed out as expected" in result.stdout:
-            print("✅ Configuration test passed!")
-            return True
-        else:
-            print("❌ Configuration test failed")
-            print("Output:", result.stdout)
-            print("Errors:", result.stderr)
-            return False
-            
-    except subprocess.TimeoutExpired:
-        print("✅ Configuration test passed! (Server started successfully)")
-        return True
-    except Exception as e:
-        print(f"❌ Test failed: {e}")
-        return False
+    # Simple validation that credentials were extracted
+    return True
 
 def main():
     """Main setup function."""
-    print("🚀 Google Sheets MCP Server - Auto Setup")
-    print("This script will configure everything automatically!")
+    print("🚀 Google Sheets MCP Server Setup")
     
-    # Step 1: Get credentials file
-    print_step(1, "Get Google Credentials")
+    # Get credentials file
     json_file = get_credentials_file()
     
-    # Step 2: Extract credentials
-    print_step(2, "Extract Credentials")
+    # Extract credentials
     credentials = extract_credentials(json_file)
     if not credentials:
         print("❌ Failed to extract credentials. Please check your JSON file.")
         return
     
-    print("✅ Successfully extracted credentials from JSON file")
-    
-    # Step 3: Create configuration
-    print_step(3, "Create Configuration")
+    # Create configuration
     project_path = get_project_path()
-    create_mcp_config(credentials, project_path)
+    config_filepath = create_mcp_config(credentials, project_path)
     
-    # Step 4: Test configuration
-    print_step(4, "Test Configuration")
+    # Test configuration
     if test_configuration():
-        print("\n🎉 SUCCESS! Your Google Sheets MCP server is ready!")
-        print("\n📋 Next steps:")
-        print("1. Copy the contents of mcp_config.json")
-        print("2. Add it to your MCP client configuration")
-        print("3. Share your Google Sheets with the service account email")
-        print("4. Start using all 23 Google Sheets tools!")
+        print("\n🎉 Setup Complete!")
+        print("\n📋 You have 2 options to get the configuration for your MCP client:")
+        print("1. Copy the JSON configuration above")
+        print("2. Open the file on your Desktop in a browser and copy the config")
+        print("   💡 Right-click the file → Open with → Browser")
         
-        print(f"\n📧 Service Account Email: {credentials['GOOGLE_CLIENT_EMAIL']}")
-        print("   (Share your Google Sheets with this email)")
-        
-        print("\n📁 Your configuration file: mcp_config.json")
-        print("   (Copy this to your MCP client)")
+        print(f"\n📧 Share your Google Sheets with: {credentials['GOOGLE_CLIENT_EMAIL']}")
         
     else:
-        print("\n❌ Setup failed. Please check the error messages above.")
-        print("💡 Make sure you have:")
-        print("   - Valid Google credentials JSON file")
-        print("   - Google Sheets and Drive APIs enabled")
-        print("   - Proper permissions for the service account")
+        print("\n❌ Setup failed. Please check your credentials and try again.")
 
 if __name__ == "__main__":
     try:

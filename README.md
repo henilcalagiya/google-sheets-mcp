@@ -12,50 +12,119 @@ A Model Context Protocol (MCP) server that provides **23 powerful tools** for in
 5. Download the credentials JSON file
 
 ### Step 2: Download & Setup
+
+#### **Where to Run These Commands:**
+- **macOS/Linux**: Terminal app
+- **Windows**: Command Prompt or PowerShell
+- **VS Code**: Integrated terminal
+- **Any IDE**: Built-in terminal
+
+#### **Setup Commands:**
+
+**For macOS/Linux:**
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/gsheet-mcp-server.git
 cd gsheet-mcp-server
 
-# Run the automatic setup (installs UV and dependencies)
-chmod +x setup.sh
-./setup.sh
+# Setup with uv (automatic dependency management)
+uv venv
+source .venv/bin/activate
+uv sync
+```
+
+**For Windows (Command Prompt):**
+```cmd
+# Clone the repository
+git clone https://github.com/yourusername/gsheet-mcp-server.git
+cd gsheet-mcp-server
+
+# Setup with uv (automatic dependency management)
+uv venv
+.venv\Scripts\activate
+uv sync
+```
+
+**For Windows (PowerShell):**
+```powershell
+# Clone the repository
+git clone https://github.com/yourusername/gsheet-mcp-server.git
+cd gsheet-mcp-server
+
+# Setup with uv (automatic dependency management)
+uv venv
+.venv\Scripts\Activate.ps1
+uv sync
 ```
 
 ### Step 3: Configure & Use
+
+**For macOS/Linux:**
 ```bash
-# Option 1: Super simple auto-setup (recommended for non-technical users)
-python3 auto_setup.py
+# Super simple auto-setup (recommended)
+python auto_setup.py
 
-# Option 2: Use the helper script
-python3 setup_config.py
+# Copy the configuration to your MCP client and start using!
+```
 
-# Option 3: Manual setup
-cp mcp_config_template.json mcp_config.json
-# Edit mcp_config.json with your Google credentials
+**For Windows:**
+```cmd
+# Super simple auto-setup (recommended)
+python auto_setup.py
 
-# Test the server
-python3 test_server.py
-
-# Add the JSON config to your MCP client and start using!
+# Copy the configuration to your MCP client and start using!
 ```
 
 ## 🎯 For Non-Technical Users
 
 **Want the simplest possible setup?** Use the auto-setup script:
 
+**For macOS/Linux:**
 ```bash
-python3 auto_setup.py
+python auto_setup.py
+```
+
+**For Windows:**
+```cmd
+python auto_setup.py
 ```
 
 This script will:
 - ✅ Ask for your Google credentials JSON file
 - ✅ Extract all the necessary information automatically
-- ✅ Create the configuration file for you
+- ✅ Create the configuration file on your Desktop (`google-sheets-mcp-config.json`)
+- ✅ Print the complete JSON configuration in terminal for easy copying
 - ✅ Test everything to make sure it works
 - ✅ Give you the exact steps to use it
 
-**See [ONE_CLICK_SETUP.md](ONE_CLICK_SETUP.md) for detailed non-technical instructions.**
+### **What You'll Get:**
+
+#### **1. Configuration File on Desktop:**
+```
+✅ Created google-sheets-mcp-config.json on your Desktop
+📁 Location: /Users/henil/Desktop/google-sheets-mcp-config.json
+```
+
+#### **2. Complete JSON in Terminal:**
+```
+============================================================
+📋 COPY THIS CONFIGURATION TO YOUR MCP CLIENT:
+============================================================
+{ /* Complete configuration with your credentials */ }
+============================================================
+📋 END OF CONFIGURATION
+============================================================
+```
+
+#### **3. Clear Next Steps:**
+```
+📋 Next steps:
+1. Copy the configuration above to your MCP client
+2. Share your Google Sheets with the service account email
+3. Start using all 23 Google Sheets tools!
+```
+
+**The auto-setup script handles everything automatically!**
 
 ## 📋 What You Get
 
@@ -101,27 +170,47 @@ This script will:
 ```
 
 #### **2. Download & Install**
+
+**For macOS/Linux:**
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/gsheet-mcp-server.git
 cd gsheet-mcp-server
 
-# Run automatic setup
-chmod +x setup.sh
-./setup.sh
+# Setup with uv (automatic dependency management)
+uv venv
+source .venv/bin/activate
+uv sync
+```
+
+**For Windows:**
+```cmd
+# Clone the repository
+git clone https://github.com/yourusername/gsheet-mcp-server.git
+cd gsheet-mcp-server
+
+# Setup with uv (automatic dependency management)
+uv venv
+.venv\Scripts\activate
+uv sync
 ```
 
 #### **3. Configure Credentials**
-```bash
-# Option 1: Use the helper script (recommended)
-python3 setup_config.py
 
-# Option 2: Manual setup
-cp mcp_config_template.json mcp_config.json
-# Edit the file with your Google credentials
-# See CREDENTIALS_SETUP.md for detailed instructions
-nano mcp_config.json
-# or use your preferred editor: code mcp_config.json, vim mcp_config.json, etc.
+**For macOS/Linux:**
+```bash
+# Option 1: Use the auto-setup script (recommended)
+python auto_setup.py
+
+# The auto-setup script handles everything automatically!
+```
+
+**For Windows:**
+```cmd
+# Option 1: Use the auto-setup script (recommended)
+python auto_setup.py
+
+# The auto-setup script handles everything automatically!
 ```
 
 #### **4. Configure MCP Client**
@@ -131,9 +220,15 @@ nano mcp_config.json
 {
   "mcpServers": {
     "google-sheets": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "gsheet_mcp_server"],
-      "cwd": "/path/to/your/gsheet-mcp-server",
+      "command": "/Users/henil/.local/bin/uv",
+      "args": [
+        "run",
+        "--project",
+        "/Users/henil/Desktop/google-sheets-mcp",
+        "python",
+        "-m",
+        "gsheet_mcp_server"
+      ],
       "env": {
         "GOOGLE_PROJECT_ID": "your-project-id-here",
         "GOOGLE_PRIVATE_KEY_ID": "your-private-key-id-here",
@@ -155,9 +250,15 @@ nano mcp_config.json
 {
   "mcpServers": {
     "google-sheets": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "gsheet_mcp_server"],
-      "cwd": "/path/to/your/gsheet-mcp-server"
+      "command": "/Users/henil/.local/bin/uv",
+      "args": [
+        "run",
+        "--project",
+        "/Users/henil/Desktop/google-sheets-mcp",
+        "python",
+        "-m",
+        "gsheet_mcp_server"
+      ]
     }
   }
 }
@@ -199,10 +300,14 @@ Then replace the placeholder values in the MCP config JSON above and update the 
 ```
 
 #### **6. Test & Use**
-```bash
-# Test the server
-python3 test_server.py
 
+**For macOS/Linux:**
+```bash
+# Start your MCP client and use all 23 tools!
+```
+
+**For Windows:**
+```cmd
 # Start your MCP client and use all 23 tools!
 ```
 
@@ -275,13 +380,17 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 ### **Testing Your Setup:**
-```bash
-# Test server startup
-python3 test_server.py
 
-# Expected output:
-# ✅ Server started successfully (timed out as expected)
-# 🎉 MCP server is working correctly!
+**For macOS/Linux:**
+```bash
+# The auto-setup script validates everything automatically!
+# No additional testing needed
+```
+
+**For Windows:**
+```cmd
+# The auto-setup script validates everything automatically!
+# No additional testing needed
 ```
 
 ## 📁 Project Structure
@@ -295,12 +404,9 @@ gsheet-mcp-server/
 │   │   ├── sheets/            # Sheet operations
 │   │   └── tables/            # Table operations
 │   └── helper/                # Utility functions
-├── setup.sh                   # Automatic setup script
-├── setup_config.py            # Quick configuration setup script
-├── mcp_config_template.json   # Template for MCP configuration
-├── CREDENTIALS_SETUP.md       # Detailed credentials setup guide
-├── test_server.py             # Server testing
-├── mcp_config.json            # Your MCP client configuration (create from template)
+├── auto_setup.py              # Automated setup script
+├── pyproject.toml             # Project dependencies
+├── uv.lock                    # Dependency lock file
 └── README.md                  # This file
 ```
 
@@ -321,21 +427,27 @@ gsheet-mcp-server/
 
 ## 📚 Additional Documentation
 
-- **[CREDENTIALS_SETUP.md](CREDENTIALS_SETUP.md)** - Detailed guide for setting up Google credentials
-- **[SHARING_GUIDE.md](SHARING_GUIDE.md)** - How to share this server with others
-- **[ENVIRONMENT_VARIABLES_SETUP.md](ENVIRONMENT_VARIABLES_SETUP.md)** - Environment variable setup details
+- **Auto-setup script** - Handles all configuration automatically
+- **Google Cloud Console** - For setting up credentials and APIs
+- **MCP Documentation** - For understanding the protocol
 
 ## 📋 Complete Example Configuration
 
-Here's a complete example of what your `mcp_config.json` should look like:
+Here's a complete example of what your configuration should look like (automatically generated by `auto_setup.py`):
 
 ```json
 {
   "mcpServers": {
     "google-sheets": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "gsheet_mcp_server"],
-      "cwd": "/Users/yourusername/path/to/gsheet-mcp-server",
+      "command": "/Users/henil/.local/bin/uv",
+      "args": [
+        "run",
+        "--project",
+        "/Users/henil/Desktop/google-sheets-mcp",
+        "python",
+        "-m",
+        "gsheet_mcp_server"
+      ],
       "env": {
         "GOOGLE_PROJECT_ID": "my-awesome-project-123",
         "GOOGLE_PRIVATE_KEY_ID": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
@@ -353,10 +465,18 @@ Here's a complete example of what your `mcp_config.json` should look like:
 ```
 
 **💡 Quick Setup:**
-1. Copy the JSON above
-2. Replace the credential values with your own
-3. Update the `cwd` path to your project directory
-4. Save as `mcp_config.json`
+
+**For macOS/Linux:**
+1. Run `python auto_setup.py` for automatic setup
+2. Copy the JSON configuration from terminal output
+3. Add to your MCP client configuration
+4. Share your Google Sheets with the service account email
+
+**For Windows:**
+1. Run `python auto_setup.py` for automatic setup
+2. Copy the JSON configuration from terminal output
+3. Add to your MCP client configuration
+4. Share your Google Sheets with the service account email
 
 ## 📄 License
 

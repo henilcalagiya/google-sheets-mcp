@@ -48,6 +48,7 @@ uv.lock
 
 # MCP config with real credentials (use template instead)
 mcp_config.json
+google-sheets-mcp-config.json
 
 # Logs
 *.log
