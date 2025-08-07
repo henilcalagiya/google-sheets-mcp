@@ -56,41 +56,87 @@ from .handler.tables.delete_table_column_handler import delete_table_column_hand
 from .handler.tables.insert_table_records_handler import insert_table_records_handler
 
 # Create an MCP server
-mcp = FastMCP("Google Sheets")
+mcp = FastMCP("Google Sheets MCP")
 
 
-def _setup_google_services(credentials_path: str):
-    """Set up Google Sheets and Drive API services."""
+def _setup_google_services_from_env():
+    """Set up Google Sheets and Drive API services from environment variables."""
     try:
-        # Try service account first
-        credentials = ServiceAccountCredentials.from_service_account_file(
-            credentials_path,
+        # Get all credential components from environment variables
+        project_id = os.getenv("GOOGLE_PROJECT_ID")
+        private_key_id = os.getenv("GOOGLE_PRIVATE_KEY_ID")
+        private_key = os.getenv("GOOGLE_PRIVATE_KEY")
+        client_email = os.getenv("GOOGLE_CLIENT_EMAIL")
+        client_id = os.getenv("GOOGLE_CLIENT_ID")
+        auth_uri = os.getenv("GOOGLE_AUTH_URI", "https://accounts.google.com/o/oauth2/auth")
+        token_uri = os.getenv("GOOGLE_TOKEN_URI", "https://oauth2.googleapis.com/token")
+        auth_provider_x509_cert_url = os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs")
+        client_x509_cert_url = os.getenv("GOOGLE_CLIENT_X509_CERT_URL")
+        
+        # Validate required fields
+        required_fields = {
+            "GOOGLE_PROJECT_ID": project_id,
+            "GOOGLE_PRIVATE_KEY_ID": private_key_id,
+            "GOOGLE_PRIVATE_KEY": private_key,
+            "GOOGLE_CLIENT_EMAIL": client_email,
+            "GOOGLE_CLIENT_ID": client_id,
+            "GOOGLE_CLIENT_X509_CERT_URL": client_x509_cert_url
+        }
+        
+        missing_fields = [field for field, value in required_fields.items() if not value]
+        if missing_fields:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_fields)}")
+        
+        # Construct service account info
+        service_account_info = {
+            "type": "service_account",
+            "project_id": project_id,
+            "private_key_id": private_key_id,
+            "private_key": private_key.replace('\\n', '\n'),  # Handle escaped newlines
+            "client_email": client_email,
+            "client_id": client_id,
+            "auth_uri": auth_uri,
+            "token_uri": token_uri,
+            "auth_provider_x509_cert_url": auth_provider_x509_cert_url,
+            "client_x509_cert_url": client_x509_cert_url
+        }
+        
+        # Create credentials
+        credentials = ServiceAccountCredentials.from_service_account_info(
+            service_account_info,
             scopes=[
                 "https://www.googleapis.com/auth/spreadsheets",
                 "https://www.googleapis.com/auth/drive.readonly",
             ],
         )
-    except Exception:
-        # Fall back to OAuth2 credentials
-        with open(credentials_path, "r") as f:
-            creds_data = json.load(f)
-        credentials = Credentials.from_authorized_user_info(creds_data)
+        
+        # Build the services
+        sheets_service = build("sheets", "v4", credentials=credentials)
+        drive_service = build("drive", "v3", credentials=credentials)
+        return sheets_service, drive_service
+        
+    except Exception as e:
+        raise RuntimeError(f"Failed to setup Google services from environment variables: {str(e)}")
 
-    # Build the services
-    sheets_service = build("sheets", "v4", credentials=credentials)
-    drive_service = build("drive", "v3", credentials=credentials)
-    return sheets_service, drive_service
+# Removed _setup_google_services function - using environment variables only
 
 
-# Initialize services
-credentials_path = os.getenv("GOOGLE_CREDENTIALS_PATH")
-
-if not credentials_path:
-    raise ValueError(
-        "GOOGLE_CREDENTIALS_PATH environment variable must be set to the path of your Google credentials JSON file"
-    )
-
-sheets_service, drive_service = _setup_google_services(credentials_path)
+# Initialize services using environment variables only
+try:
+    sheets_service, drive_service = _setup_google_services_from_env()
+    print("✅ Google services initialized from environment variables")
+except Exception as env_error:
+    print(f"❌ Failed to initialize Google services from environment variables: {env_error}")
+    print("📋 Required environment variables:")
+    print("  - GOOGLE_PROJECT_ID")
+    print("  - GOOGLE_PRIVATE_KEY_ID") 
+    print("  - GOOGLE_PRIVATE_KEY")
+    print("  - GOOGLE_CLIENT_EMAIL")
+    print("  - GOOGLE_CLIENT_ID")
+    print("  - GOOGLE_CLIENT_X509_CERT_URL")
+    print("\n💡 Use the helper script to extract from your credentials file:")
+    print("  python3 update_mcp_config.py path/to/your/credentials.json")
+    raise ValueError("Google credentials environment variables are required")
 
 
 @mcp.tool()
@@ -118,16 +164,6 @@ def rename_spreadsheet_title_tool(
 ) -> str:
     """
     Rename a Google Spreadsheet.
-    
-    This tool allows you to change the title of an existing Google Spreadsheet.
-    The operation is performed using the Google Sheets API batchUpdate method.
-    
-    Args:
-        spreadsheet_name: The current name of the spreadsheet to rename
-        new_title: The new title for the spreadsheet
-    
-    Returns:
-        JSON string with success status and operation details
     """
     return rename_spreadsheet_handler(drive_service, sheets_service, spreadsheet_name, new_title)
 
@@ -139,16 +175,6 @@ def add_sheets_tool(
 ) -> str:
     """
     Add new sheets to a Google Spreadsheet.
-    
-    This tool creates new sheets within an existing Google Spreadsheet.
-    Each sheet name in the list will become a separate sheet in the spreadsheet.
-    
-    Args:
-        spreadsheet_name: The name of the Google Spreadsheet
-        sheet_names: List of sheet names to add as new sheets
-    
-    Returns:
-        JSON string with success status and details about added sheets
     """
     return add_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names)
 
@@ -160,16 +186,6 @@ def delete_sheets_tool(
 ) -> str:
     """
     Delete sheets from a Google Spreadsheet.
-    
-    This tool removes specified sheets from a Google Spreadsheet.
-    The operation is performed using the Google Sheets API batchUpdate method.
-    
-    Args:
-        spreadsheet_name: The name of the Google Spreadsheet
-        sheet_names: List of sheet names to delete
-    
-    Returns:
-        JSON string with success status and details about deleted sheets
     """
     return delete_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names)
 
@@ -183,18 +199,6 @@ def duplicate_sheet_tool(
 ) -> str:
     """
     Duplicate an existing sheet.
-    
-    This tool creates a copy of an existing sheet within the same spreadsheet.
-    The duplicated sheet will contain all the same data, formatting, and structure as the original.
-    
-    Args:
-        spreadsheet_name: The name of the Google Spreadsheet
-        source_sheet_name: Name of the sheet to duplicate
-        new_sheet_name: Name for the duplicated sheet (optional)
-        insert_position: Position to insert the duplicated sheet (optional)
-    
-    Returns:
-        JSON string with success status and details about the duplicated sheet
     """
     return duplicate_sheet_handler(drive_service, sheets_service, spreadsheet_name, source_sheet_name, new_sheet_name, insert_position)
 
@@ -207,17 +211,6 @@ def rename_sheets_tool(
 ) -> str:
     """
     Rename sheets in a Google Spreadsheet.
-    
-    This tool allows you to rename multiple sheets within a Google Spreadsheet.
-    The operation is performed using the Google Sheets API batchUpdate method.
-    
-    Args:
-        spreadsheet_name: The name of the Google Spreadsheet
-        sheet_names: List of sheet names to rename
-        new_titles: List of new titles for the sheets
-    
-    Returns:
-        JSON string with success status and details about renamed sheets
     """
     return rename_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names, new_titles)
 

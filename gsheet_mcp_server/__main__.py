@@ -9,17 +9,9 @@ from .server import mcp
 
 def main():
     """Run the Google Sheets MCP server."""
-    # Get credentials path from environment
-    credentials_path = os.getenv("GOOGLE_CREDENTIALS_PATH")
-    if not credentials_path:
-        print("Error: GOOGLE_CREDENTIALS_PATH environment variable not set", file=sys.stderr)
-        sys.exit(1)
-    
-    if not Path(credentials_path).exists():
-        print(f"Error: Credentials file not found at {credentials_path}", file=sys.stderr)
-        sys.exit(1)
-    
-    # Run the FastMCP server
+    # The server now uses environment variables only
+    # The server.py file handles all the credential validation
+    # Just run the FastMCP server
     mcp.run()
 
 

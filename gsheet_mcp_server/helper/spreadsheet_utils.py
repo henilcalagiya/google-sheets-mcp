@@ -22,7 +22,7 @@ def get_spreadsheet_id_by_name(
         RuntimeError: If Google Drive service not initialized or if multiple files with same name found
     """
     if not drive_service:
-        raise RuntimeError("Google Drive service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+        raise RuntimeError("Google Drive service not initialized. Set Google credentials environment variables.")
     
     try:
         # Make direct API call to Google Drive

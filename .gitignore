@@ -46,6 +46,9 @@ uv.lock
 !package.json
 !pyproject.toml
 
+# MCP config with real credentials (use template instead)
+mcp_config.json
+
 # Logs
 *.log
 

@@ -235,7 +235,7 @@ def get_table_ids_by_names(
         RuntimeError: If Google Sheets service not initialized
     """
     if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+        raise RuntimeError("Google Sheets service not initialized. Set Google credentials environment variables.")
     
     if not spreadsheet_id:
         raise RuntimeError("Spreadsheet ID is required")

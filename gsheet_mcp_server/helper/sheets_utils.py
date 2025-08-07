@@ -34,7 +34,7 @@ def get_sheet_ids_by_names(
         RuntimeError: If Google Sheets service not initialized
     """
     if not sheets_service:
-        raise RuntimeError("Google Sheets service not initialized. Set GOOGLE_CREDENTIALS_PATH.")
+        raise RuntimeError("Google Sheets service not initialized. Set Google credentials environment variables.")
     
     try:
         # Get spreadsheet metadata to find sheets
