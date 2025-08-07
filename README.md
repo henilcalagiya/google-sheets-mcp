@@ -1,6 +1,13 @@
 # Google Sheets MCP Server
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Tools](https://img.shields.io/badge/Tools-23%20Available-brightgreen.svg)](https://github.com/henilcalagiya/google-sheets-mcp)
+
 A Model Context Protocol (MCP) server that provides **23 powerful tools** for interacting with Google Sheets. Built with FastMCP framework for seamless AI integration.
+
+**📋 License:** Apache License 2.0  
+**🛠️ Available Tools:** 23 Google Sheets operations  
+**🚀 Quick Setup:** 2 steps to get started
 
 ## 🚀 Quick Start (2 Steps)
 
@@ -27,6 +34,9 @@ A Model Context Protocol (MCP) server that provides **23 powerful tools** for in
 git clone https://github.com/yourusername/gsheet-mcp-server.git
 cd gsheet-mcp-server
 
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Setup with uv (automatic dependency management)
 uv venv
 source .venv/bin/activate
@@ -41,6 +51,9 @@ python auto_setup.py
 # Clone the repository
 git clone https://github.com/yourusername/gsheet-mcp-server.git
 cd gsheet-mcp-server
+
+# Install uv if not already installed
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 
 # Setup with uv (automatic dependency management)
 uv venv
@@ -57,6 +70,9 @@ python auto_setup.py
 git clone https://github.com/yourusername/gsheet-mcp-server.git
 cd gsheet-mcp-server
 
+# Install uv if not already installed
+irm https://astral.sh/uv/install.ps1 | iex
+
 # Setup with uv (automatic dependency management)
 uv venv
 .venv\Scripts\Activate.ps1
@@ -72,7 +88,7 @@ python auto_setup.py
 #### **1. Configuration File on Desktop:**
 ```
 ✅ Created google-sheets-mcp-config.json on your Desktop
-📁 Location: /Users/henil/Desktop/google-sheets-mcp-config.json
+📁 Location: ~/Desktop/google-sheets-mcp-config.json
 ```
 
 #### **2. Complete JSON in Terminal:**
@@ -91,122 +107,105 @@ python auto_setup.py
 📋 Next steps:
 1. Copy the configuration above to your MCP client
 2. Share your Google Sheets with the service account email
-3. Start using all 23 Google Sheets tools!
+3. Start using all Google Sheets tools!
 ```
 
 **The auto-setup script handles everything automatically!**
 
 ## 📋 What You Get
 
-### **23 Google Sheets Tools Available:**
+## 🛠️ Google Sheets Tools Overview
 
-#### **📊 Read Operations (8 tools):**
-- List all spreadsheets
-- List sheets in a spreadsheet
-- Analyze sheet data
-- Get table data and metadata
-- Read table rows and cells
-- Find specific table cells
+A total of **23 tools** are available, grouped by function. Each tool is listed with its operation and command name for easy reference.
 
-#### **✏️ Write Operations (15 tools):**
-- Create new spreadsheets and sheets
-- Rename spreadsheets and sheets
-- Delete sheets and spreadsheets
-- Create and manage tables
-- Insert, update, and delete table records
-- Sort and clear table data
-- Manage table columns and properties
+### **Read Operations**
+- `list_spreadsheets_and_sheets` — List all accessible spreadsheets and their sheets
+- `analyze_sheet` — Analyze sheet data and structure
+- `get_table_data` — Get table data
+- `get_table_metadata` — Get table structure info
+- `get_table_rows` — Get specific table rows
+- `find_table_cells` — Find specific cells
+- `get_table_data_by_columns` — Get data by specific columns
 
+### **Write Operations**
+- `rename_spreadsheet` — Rename a spreadsheet
+- `add_sheets_to_spreadsheet` — Add new sheets
+- `delete_sheets_from_spreadsheet` — Delete sheets
+- `duplicate_sheet` — Duplicate existing sheets
+- `rename_sheets_in_spreadsheet` — Rename sheets
+- `create_table` — Create new tables
+- `insert_table_records` — Add new records
+- `update_table_row` — Update existing records
+- `delete_table_records` — Delete records
+- `clear_table_data` — Clear all table data
+- `delete_table` — Delete entire table
+- `rename_table` — Rename table
+- `sort_table` — Sort table data
+- `toggle_table_footer` — Show/hide table footer
+- `add_table_column` — Add new columns
+- `delete_table_column` — Delete columns
+- `rename_table_column` — Rename columns
+- `change_table_column_type` — Change column data type
+- `manage_column_properties` — Manage column settings
+- `manage_dropdown_options` — Manage dropdown lists
+- `update_table_cells` — Update cell values
 
-
-## 🛠️ Available Tools
-
-### **Spreadsheet Management:**
-- `list_spreadsheets_and_sheets` - List all accessible spreadsheets
-- `rename_spreadsheet` - Rename a spreadsheet
-
-### **Sheet Operations:**
-- `add_sheets_to_spreadsheet` - Add new sheets
-- `delete_sheets_from_spreadsheet` - Delete sheets
-- `duplicate_sheet` - Duplicate existing sheets
-- `rename_sheets_in_spreadsheet` - Rename sheets
-- `analyze_sheet` - Analyze sheet data and structure
-
-### **Table Operations:**
-- `create_table` - Create new tables
-- `get_table_data` - Get table data
-- `get_table_metadata` - Get table structure info
-- `get_table_rows` - Get specific table rows
-- `insert_table_records` - Add new records
-- `update_table_row` - Update existing records
-- `delete_table_records` - Delete records
-- `clear_table_data` - Clear all table data
-- `delete_table` - Delete entire table
-- `rename_table` - Rename table
-- `sort_table` - Sort table data
-- `toggle_table_footer` - Show/hide table footer
-
-### **Column Management:**
-- `add_table_column` - Add new columns
-- `delete_table_column` - Delete columns
-- `rename_table_column` - Rename columns
-- `change_table_column_type` - Change column data type
-- `manage_column_properties` - Manage column settings
-- `manage_dropdown_options` - Manage dropdown lists
-
-### **Cell Operations:**
-- `find_table_cells` - Find specific cells
-- `update_table_cells` - Update cell values
-- `get_table_data_by_columns` - Get data by specific columns
+**Note:** All tools are accessible after setup. No need to reference multiple lists—everything is included above for quick access.
 
 ## 🔍 Troubleshooting
 
-### **Common Issues:**
+### Common Issues
 
-#### **"UV not found"**
-```bash
-# Install UV manually
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+#### UV Not Found
+- **Install UV manually:**
+  - **macOS/Linux:**
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+  - **Windows PowerShell:**
+    ```powershell
+    irm https://astral.sh/uv/install.ps1 | iex
+    ```
+  - **Windows Command Prompt:**
+    ```cmd
+    powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+    ```
 
-#### **"Missing environment variables"**
-```bash
-# The auto-setup script handles this automatically
-# Make sure you ran python auto_setup.py successfully
-```
+#### Missing Environment Variables
+- The auto-setup script sets environment variables automatically.
+- Ensure you have successfully run:
+  ```bash
+  python auto_setup.py
+  ```
 
-#### **"Cannot access Google Sheets"**
-```bash
-# Share your Google Sheets with service account email
-# Give "Editor" permissions
-```
+#### Cannot Access Google Sheets
+- Share your Google Sheets with the service account email.
+- Grant "Editor" permissions.
 
-#### **"Authentication failed"**
-```bash
-# Check that APIs are enabled in Google Cloud Console
-# Verify service account has correct permissions
-```
+#### Authentication Failed
+- Confirm that required APIs are enabled in the Google Cloud Console.
+- Verify the service account has the necessary permissions.
 
-### **Testing Your Setup:**
+### Testing Your Setup
 
-**For macOS/Linux:**
-```bash
-# The auto-setup script validates everything automatically!
-# No additional testing needed
-```
+- The auto-setup script validates your configuration automatically.
+- No additional testing is required on any platform.
 
-**For Windows:**
-```cmd
-# The auto-setup script validates everything automatically!
-# No additional testing needed
-```
+- **macOS/Linux:**
+  ```bash
+  # No additional testing needed
+  ```
+- **Windows:**
+  ```cmd
+  REM No additional testing needed
+  ```
 
 ## 📁 Project Structure
 
 ```
 gsheet-mcp-server/
 ├── gsheet_mcp_server/          # Main server code
-│   ├── server.py               # Main server file (23 tools)
+│   ├── server.py               # Main server file (all tools)
 │   ├── handler/                # Tool handlers
 │   │   ├── spreadsheet/        # Spreadsheet operations
 │   │   ├── sheets/            # Sheet operations
@@ -233,11 +232,7 @@ gsheet-mcp-server/
 4. Test thoroughly
 5. Submit a pull request
 
-## 📚 Additional Documentation
 
-- **Auto-setup script** - Handles all configuration automatically
-- **Google Cloud Console** - For setting up credentials and APIs
-- **MCP Documentation** - For understanding the protocol
 
 ## 📋 Complete Example Configuration
 
@@ -283,7 +278,7 @@ Here's a complete example of what your configuration should look like (automatic
 
 ## 📄 License
 
-MIT License - see LICENSE file for details
+Apache License 2.0 - see LICENSE file for details
 
 ## 🆘 Support
 
