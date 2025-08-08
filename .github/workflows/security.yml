@@ -17,6 +17,12 @@ jobs:
       with:
         python-version: '3.10'
     
+    - name: Install toml
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        uv pip install toml
+    
     - name: Check for hardcoded credentials
       run: |
         echo "🔍 Checking for hardcoded credentials..."
@@ -88,9 +94,9 @@ jobs:
         python -c "
         import tarfile
         import os
-        import tomllib
-        with open('pyproject.toml', 'rb') as f:
-            version = tomllib.load(f)['project']['version']
+        import toml
+        with open('pyproject.toml', 'r') as f:
+            version = toml.load(f)['project']['version']
         package_file = f'dist/google_sheets_mcp-{version}.tar.gz'
         
         if not os.path.exists(package_file):

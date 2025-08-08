@@ -124,9 +124,9 @@ python -c "import gsheet_mcp_server; print('✅ Successfully installed')"
    python -c "
    import tarfile
    import os
-   import tomllib
-   with open('pyproject.toml', 'rb') as f:
-       version = tomllib.load(f)['project']['version']
+   import toml
+   with open('pyproject.toml', 'r') as f:
+       version = toml.load(f)['project']['version']
    package_file = f'dist/google_sheets_mcp-{version}.tar.gz'
    t = tarfile.open(package_file)
    [print(f.name) for f in t.getmembers() if f.name.endswith('.py')]
@@ -135,9 +135,9 @@ python -c "import gsheet_mcp_server; print('✅ Successfully installed')"
    # Test wheel installation
    python -c "
    import os
-   import tomllib
-   with open('pyproject.toml', 'rb') as f:
-       version = tomllib.load(f)['project']['version']
+   import toml
+   with open('pyproject.toml', 'r') as f:
+       version = toml.load(f)['project']['version']
    wheel_file = f'dist/google_sheets_mcp-{version}-py3-none-any.whl'
    import subprocess
    subprocess.run(['pip', 'install', wheel_file], check=True)
