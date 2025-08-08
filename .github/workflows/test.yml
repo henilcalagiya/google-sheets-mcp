@@ -40,10 +40,13 @@ jobs:
     
     - name: Check package contents
       run: |
+        # Test package contents
         python -c "
         import tarfile
         import os
-        version = os.popen('python -c \"import tomllib; print(tomllib.load(open(\\\"pyproject.toml\\\", \\\"rb\\\"))[\\\"project\\\"][\\\"version\\\"]\"').read().strip()
+        import tomllib
+        with open('pyproject.toml', 'rb') as f:
+            version = tomllib.load(f)['project']['version']
         package_file = f'dist/google_sheets_mcp-{version}.tar.gz'
         
         if not os.path.exists(package_file):
