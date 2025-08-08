@@ -1,6 +1,6 @@
 [project]
 name = "google-sheets-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Your AI Assistant's Gateway to Google Sheets! 25 powerful tools for seamless Google Sheets automation via MCP"
 authors = [
     {name = "Henil C Alagiya", email = "henilalagiya@gmail.com"}
