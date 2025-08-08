@@ -2,6 +2,7 @@
 
 from typing import List, Dict, Any
 from googleapiclient.errors import HttpError
+import re
 
 from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_name
 from gsheet_mcp_server.helper.sheets_utils import get_sheet_ids_by_names
@@ -17,7 +18,7 @@ def delete_table_records_handler(
     spreadsheet_name: str,
     sheet_name: str,
     table_name: str,
-    row_indices: List[int]
+    record_numbers: List[int]
 ) -> str:
     """
     Delete specific records (rows) from a table in Google Sheets using DeleteRangeRequest and UpdateTableRequest.
@@ -25,6 +26,7 @@ def delete_table_records_handler(
     According to the official Google Sheets API documentation, to delete records from a table:
     1. Use DeleteRangeRequest to remove specific rows from the sheet
     2. Use UpdateTableRequest to shrink the table's range to exclude deleted rows
+    3. Delete records in descending order (bigger numbers first) to avoid index shifting
     
     Args:
         drive_service: Google Drive service instance
@@ -32,7 +34,7 @@ def delete_table_records_handler(
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
         table_name: Name of the table to delete records from
-        row_indices: List of row indices to delete (1-based, excluding header)
+        record_numbers: List of record numbers to delete (1-based, excluding header)
     
     Returns:
         str: Success message with deletion details or error message
@@ -45,44 +47,44 @@ def delete_table_records_handler(
                 "message": "Table name is required."
             })
         
-        if not row_indices or len(row_indices) == 0:
+        if not record_numbers or not isinstance(record_numbers, list) or len(record_numbers) == 0:
             return compact_json_response({
                 "success": False,
-                "message": "Row indices are required. Please provide at least one row index to delete."
+                "message": "Record numbers are required. Please provide at least one record number to delete."
             })
         
-        # Validate row indices
-        validated_indices = []
-        invalid_indices = []
+        # Validate record numbers
+        validated_numbers = []
+        invalid_numbers = []
         
-        for i, row_index in enumerate(row_indices):
-            if not isinstance(row_index, int):
-                invalid_indices.append({"index": i, "value": row_index, "error": "Row index must be an integer"})
+        for i, record_number in enumerate(record_numbers):
+            if not isinstance(record_number, int):
+                invalid_numbers.append({"index": i, "value": record_number, "error": "Record number must be an integer"})
                 continue
             
-            if row_index < 1:
-                invalid_indices.append({"index": i, "value": row_index, "error": "Row index must be 1 or greater"})
+            if record_number < 1:
+                invalid_numbers.append({"index": i, "value": record_number, "error": "Record number must be 1 or greater"})
                 continue
             
-            validated_indices.append(row_index)
+            validated_numbers.append(record_number)
         
-        if invalid_indices:
-            error_messages = [f"Row {item['index']+1} ({item['value']}): {item['error']}" for item in invalid_indices]
+        if invalid_numbers:
+            error_messages = [f"Record {item['index']+1} ({item['value']}): {item['error']}" for item in invalid_numbers]
             return compact_json_response({
                 "success": False,
-                "message": f"Invalid row indices: {'; '.join(error_messages)}",
-                "invalid_indices": invalid_indices
+                "message": f"Invalid record numbers: {'; '.join(error_messages)}",
+                "invalid_numbers": invalid_numbers
             })
         
-        if not validated_indices:
+        if not validated_numbers:
             return compact_json_response({
                 "success": False,
-                "message": "No valid row indices provided after validation."
+                "message": "No valid record numbers provided after validation."
             })
         
         # Remove duplicates and sort in descending order (to avoid index shifting)
-        unique_indices = list(set(validated_indices))
-        unique_indices.sort(reverse=True)
+        unique_numbers = list(set(validated_numbers))
+        unique_numbers.sort(reverse=True)  # Delete bigger numbers first
         
         # Get spreadsheet ID
         spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
@@ -130,8 +132,9 @@ def delete_table_records_handler(
         invalid_range_indices = []
         valid_delete_requests = []
         
-        for row_index in unique_indices:
-            # Convert 1-based user index to 0-based API index (accounting for header)
+        # Convert 1-based user index to 0-based API index (accounting for header)
+        # and then to 0-based API index for deletion (accounting for header)
+        for row_index in unique_numbers:
             api_row_index = table_start_row + row_index
             
             if api_row_index < table_start_row or api_row_index >= table_end_row:
@@ -188,7 +191,7 @@ def delete_table_records_handler(
             "sheet_name": sheet_name,
             "table_name": table_name,
             "rows_deleted": delete_count,
-            "deleted_row_indices": unique_indices,
+            "deleted_row_indices": unique_numbers,
             "message": f"Successfully deleted {delete_count} row(s) from table '{table_name}' in '{sheet_name}'"
         }
         

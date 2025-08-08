@@ -1,14 +1,14 @@
 # Google Sheets MCP Server
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Tools](https://img.shields.io/badge/Tools-23%20Available-brightgreen.svg)](https://github.com/henilcalagiya/google-sheets-mcp)
+[![Tools](https://img.shields.io/badge/Tools-25%20Available-brightgreen.svg)](https://github.com/henilcalagiya/google-sheets-mcp)
 
-A Model Context Protocol (MCP) server that provides **23 powerful tools** for interacting with Google Sheets. Built with FastMCP framework for seamless AI integration.
+A Model Context Protocol (MCP) server that provides **25 powerful tools** for interacting with Google Sheets. Built with FastMCP framework for seamless AI integration.
 
 **What is MCP?** Model Context Protocol enables AI assistants to access external tools and data sources. This server connects your AI tools (Claude, Continue, Perplexity) directly to Google Sheets for powerful automation.
 
 **📋 License:** Apache License 2.0  
-**🛠️ Available Tools:** 23 Google Sheets operations  
+**🛠️ Available Tools:** 25 Google Sheets operations  
 **🚀 Quick Setup:** 3 steps to get started
 
 ## 🚀 Quick Start (3 Steps)
@@ -133,53 +133,60 @@ python auto_setup.py
 - **Email:** Use the service account email shown in your terminal. You can also find this email in the Google Cloud Console where you created the API, or in the JSON file that was created on your Desktop.
 - **Permissions:** Give "Editor" access to your Google Sheets
 
-**🎉 You're all set!** Start using all 23 Google Sheets tools in your MCP client.
+**🎉 You're all set!** Start using all 25 Google Sheets tools in your MCP client.
 
 ## 📦 What's Included
 
 ### **🎯 Complete Setup Package:**
 - **✅ Configuration file** on your Desktop
 - **✅ Complete JSON** in terminal for easy copying
-- **✅ 23 Google Sheets tools** ready to use
+- **✅ 25 Google Sheets tools** ready to use
 - **✅ Cross-platform support** (macOS, Linux, Windows)
 
 ## 🛠️ Google Sheets Tools Overview
 
-A total of **23 tools** are available, grouped by function. Each tool is listed with its operation and command name for easy reference.
+A total of **25 tools** are available, grouped by function. Each tool is listed with its operation and command name for easy reference.
 
-### **Read Operations**
-- `list_spreadsheets_and_sheets` — List all accessible spreadsheets and their sheets
-- `analyze_sheet` — Analyze sheet data and structure
-- `get_table_data` — Get table data
-- `get_table_metadata` — Get table structure info
-- `get_table_rows` — Get specific table rows
-- `find_table_cells` — Find specific cells
-- `get_table_data_by_columns` — Get data by specific columns
+### **📊 Spreadsheet Management (2 tools)**
+- `discover_spreadsheets_tool` — List all accessible spreadsheets and their sheets
+- `update_spreadsheet_title_tool` — Rename a spreadsheet
 
-### **Write Operations**
-- `rename_spreadsheet` — Rename a spreadsheet
-- `add_sheets_to_spreadsheet` — Add new sheets
-- `delete_sheets_from_spreadsheet` — Delete sheets
-- `duplicate_sheet` — Duplicate existing sheets
-- `rename_sheets_in_spreadsheet` — Rename sheets
-- `create_table` — Create new tables
-- `insert_table_records` — Add new records
-- `update_table_row` — Update existing records
-- `delete_table_records` — Delete records
-- `clear_table_data` — Clear all table data
-- `delete_table` — Delete entire table
-- `rename_table` — Rename table
-- `sort_table` — Sort table data
-- `toggle_table_footer` — Show/hide table footer
-- `add_table_column` — Add new columns
-- `delete_table_column` — Delete columns
-- `rename_table_column` — Rename columns
-- `change_table_column_type` — Change column data type
-- `manage_column_properties` — Manage column settings
-- `manage_dropdown_options` — Manage dropdown lists
-- `update_table_cells` — Update cell values
+### **📋 Sheet Management (5 tools)**
+- `create_sheets_tool` — Add new sheets to a spreadsheet
+- `delete_sheets_tool` — Delete sheets from a spreadsheet
+- `create_duplicate_sheet_tool` — Duplicate existing sheets
+- `update_sheet_titles_tool` — Rename sheets in a spreadsheet
+- `analyze_sheet_structure_tool` — Analyze sheet data and structure
 
-**Note:** All tools are accessible after setup. No need to reference multiple lists—everything is included above for quick access.
+### **📈 Table Management (18 tools)**
+
+#### **Table CRUD Operations (4 tools)**
+- `create_table_tool` — Create new tables with specified columns and data types
+- `delete_table_tool` — Delete entire tables
+- `update_table_title_tool` — Rename tables
+- `get_table_metadata_tool` — Get comprehensive table structure and metadata
+
+#### **Data Operations (4 tools)**
+- `get_table_data_tool` — Get table data with optional filtering
+- `add_table_records_tool` — Add new records to tables
+- `delete_table_records_tool` — Delete specific records from tables
+- `update_table_sorting_tool` — Sort table data by specific columns
+
+#### **Column Operations (6 tools)**
+- `add_table_column_tool` — Add new columns to existing tables
+- `delete_table_column_tool` — Delete specific columns from tables
+- `update_table_column_name_tool` — Update column names
+- `update_table_column_type_tool` — Update column data types
+- `update_dropdown_options_tool` — Update dropdown lists and options
+- `get_sheet_cells_by_notation_tool` — Get values from specific cells using A1 notation
+
+#### **Cell Operations (4 tools)**
+- `update_table_cells_by_notation_tool` — Update specific cells using A1 notation
+- `get_sheet_cells_by_range_tool` — Get cell data from specific ranges
+- `update_table_cells_by_range_tool` — Update cell data in specific ranges
+- `get_sheet_cells_by_notation_tool` — Get values from specific cells using A1 notation
+
+**Note:** All tools are accessible after setup. Each tool provides comprehensive functionality for Google Sheets automation and management.
 
 ## 🔍 Troubleshooting
 

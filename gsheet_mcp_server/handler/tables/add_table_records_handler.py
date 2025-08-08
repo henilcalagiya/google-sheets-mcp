@@ -1,4 +1,4 @@
-"""Handler for inserting records (rows) into tables in Google Sheets."""
+"""Handler for adding records (rows) into tables in Google Sheets."""
 
 from typing import List, Dict, Any, Union, Optional
 from googleapiclient.errors import HttpError
@@ -13,7 +13,7 @@ from gsheet_mcp_server.helper.tables_utils import (
 )
 from gsheet_mcp_server.helper.json_utils import compact_json_response
 
-def insert_table_records_handler(
+def add_table_records_handler(
     drive_service,
     sheets_service,
     spreadsheet_name: str,
@@ -22,9 +22,9 @@ def insert_table_records_handler(
     records: List[List[Union[str, int, float, bool, None]]]
 ) -> str:
     """
-    Insert records (rows) into a table in Google Sheets using InsertRangeRequest, UpdateCellsRequest, and UpdateTableRequest.
+    Add records (rows) into a table in Google Sheets using InsertRangeRequest, UpdateCellsRequest, and UpdateTableRequest.
     
-    According to the official Google Sheets API documentation, to insert records into a table:
+    According to the official Google Sheets API documentation, to add records into a table:
     1. Use InsertRangeRequest to insert new rows at the end of the table
     2. Use UpdateCellsRequest to write values into the inserted rows
     3. Use UpdateTableRequest to update the table's range to include the new rows
@@ -36,7 +36,7 @@ def insert_table_records_handler(
         sheets_service: Google Sheets service instance
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to insert records into
+        table_name: Name of the table to add records into
         records: List of records, where each record is a list of values matching table columns
     
     Returns:

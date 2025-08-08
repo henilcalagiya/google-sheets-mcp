@@ -1,4 +1,4 @@
-"""Handler for renaming tables in Google Sheets."""
+"""Handler for updating table titles in Google Sheets."""
 
 from typing import Dict, Any
 from googleapiclient.errors import HttpError
@@ -12,7 +12,7 @@ from gsheet_mcp_server.helper.tables_utils import (
 )
 from gsheet_mcp_server.helper.json_utils import compact_json_response
 
-def rename_table_handler(
+def update_table_title_handler(
     drive_service,
     sheets_service,
     spreadsheet_name: str,
@@ -21,9 +21,9 @@ def rename_table_handler(
     new_table_name: str
 ) -> str:
     """
-    Rename a table in Google Sheets using the Google Sheets API updateTable request.
+    Update a table title in Google Sheets using the Google Sheets API updateTable request.
     
-    This function validates inputs, checks for duplicates, and performs the rename operation
+    This function validates inputs, checks for duplicates, and performs the update operation
     while preserving all other table properties (range, columns, data validation, etc.).
     
     Args:
@@ -31,11 +31,11 @@ def rename_table_handler(
         sheets_service: Google Sheets service instance
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        old_table_name: Current name of the table to rename
-        new_table_name: New name for the table
+        old_table_name: Current name of the table to update
+        new_table_name: New title for the table
     
     Returns:
-        JSON string with success status and rename details
+        JSON string with success status and update details
     """
     try:
         # Validate old table name
@@ -51,7 +51,7 @@ def rename_table_handler(
         if not new_table_name or new_table_name.strip() == "":
             return compact_json_response({
                 "success": False,
-                "message": "New table name is required."
+                "message": "New table title is required."
             })
         
         new_table_validation = validate_table_name(new_table_name)
@@ -67,7 +67,7 @@ def rename_table_handler(
         if validated_old_table_name == validated_new_table_name:
             return compact_json_response({
                 "success": False,
-                "message": "Old and new table names are the same."
+                "message": "Old and new table titles are the same."
             })
         
         # Get spreadsheet ID
@@ -97,7 +97,7 @@ def rename_table_handler(
                 "message": f"Table '{validated_old_table_name}' not found in sheet '{sheet_name}'."
             })
         
-        # Check for duplicate new table name (excluding the table being renamed)
+        # Check for duplicate new table name (excluding the table being updated)
         duplicate_check = check_duplicate_table_name(sheets_service, spreadsheet_id, sheet_name, validated_new_table_name)
         if duplicate_check["has_duplicate"]:
             return compact_json_response({
@@ -128,10 +128,10 @@ def rename_table_handler(
             if not replies:
                 return compact_json_response({
                     "success": False,
-                    "message": "Failed to rename table - no response from API"
+                    "message": "Failed to update table title - no response from API"
                 })
             
-            # Check if the update was successful (the table name was actually changed)
+            # Check if the update was successful (the table title was actually changed)
             # Even if updateTable field is not in response, the operation might still be successful
             # We'll consider it successful if we get a reply and no error was thrown
             
@@ -142,7 +142,7 @@ def rename_table_handler(
                 "old_table_name": validated_old_table_name,
                 "new_table_name": validated_new_table_name,
                 "table_id": table_id,
-                "message": f"Successfully renamed table '{validated_old_table_name}' to '{validated_new_table_name}' in '{sheet_name}'"
+                "message": f"Successfully updated table '{validated_old_table_name}' title to '{validated_new_table_name}' in '{sheet_name}'"
             }
             
             # Add warning if there was a warning during duplicate check
@@ -162,4 +162,4 @@ def rename_table_handler(
         return compact_json_response({
             "success": False,
             "message": f"Unexpected error: {str(e)}"
-        }) 
+        })

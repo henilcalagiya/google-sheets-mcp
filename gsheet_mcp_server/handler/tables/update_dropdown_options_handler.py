@@ -1,4 +1,4 @@
-"""Handler for managing dropdown options in table columns in Google Sheets."""
+"""Handler for updating dropdown options in table columns in Google Sheets."""
 
 from typing import List, Dict, Union, Optional
 from googleapiclient.errors import HttpError
@@ -11,20 +11,20 @@ from gsheet_mcp_server.helper.tables_utils import (
 )
 from gsheet_mcp_server.helper.json_utils import compact_json_response
 
-def manage_dropdown_options_handler(
+def update_dropdown_options_handler(
     drive_service,
     sheets_service,
     spreadsheet_name: str,
     sheet_name: str,
     table_name: str,
     action: str,
-    column_names: List[str],
-    dropdown_options: Optional[List[List[str]]] = None
+    column_name: str,
+    dropdown_options: Optional[List[str]] = None
 ) -> str:
     """
-    Manage dropdown options in table columns in Google Sheets using the official updateTable operation.
+    Update dropdown options in a table column in Google Sheets using the official updateTable operation.
     
-    According to the official Google Sheets API documentation, to manage dropdown options:
+    According to the official Google Sheets API documentation, to update dropdown options:
     1. Use UpdateTableRequest to update column properties with data validation rules
     2. Set the column type to DROPDOWN and add validation options, or remove validation
     
@@ -33,15 +33,15 @@ def manage_dropdown_options_handler(
         sheets_service: Google Sheets service instance
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to manage dropdown options in
+        table_name: Name of the table to update dropdown options in
         action: Action to perform - "add" or "remove"
-        column_names: List of column names to manage dropdown options for
-        dropdown_options: List of dropdown options to add/remove for each column:
+        column_name: Name of the column to update dropdown options for
+        dropdown_options: List of dropdown options to add/remove:
             - For "add" action: List of new options to add to existing dropdown
             - For "remove" action: List of options to remove from existing dropdown
     
     Returns:
-        str: Success message with dropdown management details or error message
+        str: Success message with dropdown update details or error message
     """
     try:
         # Validate inputs
@@ -57,10 +57,10 @@ def manage_dropdown_options_handler(
                 "message": "Action must be 'add' or 'remove'."
             })
         
-        if not column_names or not isinstance(column_names, list):
+        if not column_name or not isinstance(column_name, str) or column_name.strip() == "":
             return compact_json_response({
                 "success": False,
-                "message": "Column names are required and must be a list."
+                "message": "Column name is required and cannot be empty."
             })
         
         # Validate dropdown options for add/remove actions
@@ -70,81 +70,58 @@ def manage_dropdown_options_handler(
                     "success": False,
                     "message": f"Dropdown options are required for '{action}' action and must be a list."
                 })
-            
-            if len(column_names) != len(dropdown_options):
-                return compact_json_response({
-                    "success": False,
-                    "message": "Number of column names must match number of dropdown options lists."
-                })
         
-        # Validate column names
-        validated_columns = []
-        invalid_columns = []
-        
-        for i, col_name in enumerate(column_names):
-            if not col_name or not isinstance(col_name, str) or col_name.strip() == "":
-                invalid_columns.append({"index": i, "column": col_name, "error": "Column name cannot be empty"})
-                continue
-            
-            validated_columns.append(col_name.strip())
-        
-        if invalid_columns:
-            error_messages = [f"Column {item['index']+1} '{item['column']}': {item['error']}" for item in invalid_columns]
-            return compact_json_response({
-                "success": False,
-                "message": f"Invalid columns: {'; '.join(error_messages)}",
-                "invalid_columns": invalid_columns
-            })
-        
-        if not validated_columns:
-            return compact_json_response({
-                "success": False,
-                "message": "No valid columns provided after validation."
-            })
+        # Validate column name
+        validated_column = column_name.strip()
         
         # Validate dropdown options for add/remove actions
         validated_operations = []
         if action in ["add", "remove"]:
-            for i, (col_name, options) in enumerate(zip(validated_columns, dropdown_options)):
-                if not isinstance(options, list):
-                    invalid_columns.append({"index": i, "column": col_name, "error": "Dropdown options must be a list"})
-                    continue
-                
-                if not options:
-                    invalid_columns.append({"index": i, "column": col_name, "error": "Dropdown options cannot be empty"})
-                    continue
-                
-                # Validate individual options
-                valid_options = []
-                invalid_options = []
-                
-                for j, option in enumerate(options):
-                    if not isinstance(option, str) or option.strip() == "":
-                        invalid_options.append({"option_index": j, "option": option, "error": "Option cannot be empty"})
-                    else:
-                        valid_options.append(option.strip())
-                
-                if invalid_options:
-                    error_messages = [f"Option {item['option_index']+1}: {item['error']}" for item in invalid_options]
-                    invalid_columns.append({"index": i, "column": col_name, "error": f"Invalid options: {'; '.join(error_messages)}"})
-                    continue
-                
-                if not valid_options:
-                    invalid_columns.append({"index": i, "column": col_name, "error": "No valid options provided"})
-                    continue
-                
-                validated_operations.append({
-                    "column_name": col_name,
-                    "options": valid_options
-                })
-            
-            if invalid_columns:
-                error_messages = [f"Column '{item['column']}': {item['error']}" for item in invalid_columns]
+            if not dropdown_options:
                 return compact_json_response({
                     "success": False,
-                    "message": f"Invalid dropdown configurations: {'; '.join(error_messages)}",
-                    "invalid_columns": invalid_columns
+                    "message": f"Dropdown options are required for '{action}' action."
                 })
+            
+            if not isinstance(dropdown_options, list):
+                return compact_json_response({
+                    "success": False,
+                    "message": "Dropdown options must be a list."
+                })
+            
+            if not dropdown_options:
+                return compact_json_response({
+                    "success": False,
+                    "message": "Dropdown options cannot be empty."
+                })
+            
+            # Validate individual options
+            valid_options = []
+            invalid_options = []
+            
+            for j, option in enumerate(dropdown_options):
+                if not isinstance(option, str) or option.strip() == "":
+                    invalid_options.append({"option_index": j, "option": option, "error": "Option cannot be empty"})
+                else:
+                    valid_options.append(option.strip())
+            
+            if invalid_options:
+                error_messages = [f"Option {item['option_index']+1}: {item['error']}" for item in invalid_options]
+                return compact_json_response({
+                    "success": False,
+                    "message": f"Invalid options: {'; '.join(error_messages)}"
+                })
+            
+            if not valid_options:
+                return compact_json_response({
+                    "success": False,
+                    "message": "No valid options provided."
+                })
+            
+            validated_operations.append({
+                "column_name": validated_column,
+                "options": valid_options
+            })
         
         # Get spreadsheet ID
         spreadsheet_id = get_spreadsheet_id_by_name(drive_service, spreadsheet_name)
@@ -182,38 +159,35 @@ def manage_dropdown_options_handler(
                 "message": f"Could not retrieve information for table '{table_name}': {str(e)}"
             })
         
-        # Validate that all specified columns exist in the table
+        # Validate that the specified column exists in the table
         existing_column_names = [col.get("name", "") for col in columns]
         missing_columns = []
         valid_operations = []
         
         if action == "add":
-            # For add action, check if columns exist
-            dropdown_mapping = {operation["column_name"]: operation["options"] for operation in validated_operations}
-            
-            for operation in validated_operations:
-                if operation["column_name"] not in existing_column_names:
-                    missing_columns.append(operation["column_name"])
-                else:
-                    valid_operations.append(operation)
+            # For add action, check if column exists
+            if validated_column not in existing_column_names:
+                missing_columns.append(validated_column)
+            else:
+                valid_operations.append({
+                    "column_name": validated_column,
+                    "options": dropdown_options
+                })
         elif action == "remove":
-            # For remove action, check if columns exist and have dropdown validation
-            for operation in validated_operations:
-                col_name = operation["column_name"]
-                if col_name not in existing_column_names:
-                    missing_columns.append(col_name)
-                else:
-                    # Find the column and check if it has dropdown validation
-                    for col in columns:
-                        if col.get("name", "") == col_name:
-                            col_type = col.get("type", "TEXT")
-                            has_validation = "dataValidationRule" in col
-                            
-                            if col_type == "DROPDOWN" and has_validation:
-                                valid_operations.append(operation)
-                            else:
-                                missing_columns.append(col_name)
-                            break
+            # For remove action, check if column exists and has dropdown validation
+            for col in columns:
+                if col.get("name", "") == validated_column:
+                    col_type = col.get("type", "TEXT")
+                    has_validation = "dataValidationRule" in col
+                    
+                    if col_type == "DROPDOWN" and has_validation:
+                        valid_operations.append({
+                            "column_name": validated_column,
+                            "options": dropdown_options
+                        })
+                    else:
+                        missing_columns.append(validated_column)
+                    break
         
         if missing_columns:
             return compact_json_response({

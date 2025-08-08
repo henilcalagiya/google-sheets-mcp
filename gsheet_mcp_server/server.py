@@ -18,42 +18,44 @@ from pydantic import BaseModel, Field
 from .models import SheetInfo
 
 # Local imports - Spreadsheet management handlers
-from .handler.spreadsheet.rename_spreadsheet_handler import rename_spreadsheet_handler
-from .handler.spreadsheet.list_spreadsheets_and_sheets_handler import list_spreadsheets_and_sheets_handler
+from .handler.spreadsheet.update_spreadsheet_title_handler import update_spreadsheet_title_handler
+from .handler.spreadsheet.discover_spreadsheets_handler import discover_spreadsheets_handler
 
 # Local imports - Sheets handlers
-from .handler.sheets.add_sheets_handler import add_sheets_handler
+from .handler.sheets.create_sheets_handler import create_sheets_handler
 from .handler.sheets.delete_sheets_handler import delete_sheets_handler
-from .handler.sheets.duplicate_sheet_handler import duplicate_sheet_handler
-from .handler.sheets.rename_sheets_handler import rename_sheets_handler
-from .handler.sheets.analyze_sheet_handler import analyze_sheet_handler
+from .handler.sheets.create_duplicate_sheet_handler import create_duplicate_sheet_handler
+from .handler.sheets.update_sheet_titles_handler import update_sheet_titles_handler
+from .handler.sheets.analyze_sheet_structure_handler import analyze_sheet_structure_handler
 
 # Local imports - Table management handlers
 from .handler.tables.create_table_handler import create_table_handler
 from .handler.tables.delete_table_handler import delete_table_handler
-from .handler.tables.rename_table_handler import rename_table_handler
+from .handler.tables.update_table_title_handler import update_table_title_handler
 from .handler.tables.get_table_metadata_handler import get_table_metadata_handler
 from .handler.tables.add_table_column_handler import add_table_column_handler
 
 
 from .handler.tables.update_table_sorting_handler import update_table_sorting_handler
-from .handler.tables.clear_table_data_handler import clear_table_data_handler
-from .handler.tables.delete_table_records_handler import delete_table_records_handler
-from .handler.tables.get_table_rows_handler import get_table_rows_handler
-from .handler.tables.update_table_row_handler import update_table_row_handler
-from .handler.tables.update_table_cells_handler import update_table_cells_handler
-from .handler.tables.find_table_cells_handler import find_table_cells_handler
-from .handler.tables.rename_table_column_handler import rename_table_column_handler
-from .handler.tables.change_table_column_type_handler import change_table_column_type_handler
-from .handler.tables.manage_column_properties_handler import manage_column_properties_handler
-from .handler.tables.toggle_table_footer_handler import toggle_table_footer_handler
-from .handler.tables.read_table_data_handler import read_table_data_handler
-from .handler.tables.get_table_data_by_columns_handler import get_table_data_by_columns_handler
-from .handler.tables.get_table_data_handler import get_table_data_handler
-from .handler.tables.manage_dropdown_options_handler import manage_dropdown_options_handler
-from .handler.tables.delete_table_column_handler import delete_table_column_handler
 
-from .handler.tables.insert_table_records_handler import insert_table_records_handler
+from .handler.tables.delete_table_records_handler import delete_table_records_handler
+
+
+from .handler.tables.update_table_cells_by_notation_handler import update_table_cells_by_notation_handler
+from .handler.tables.get_sheet_cells_by_notation_handler import get_sheet_cells_by_notation_handler
+from .handler.tables.update_table_column_name_handler import update_table_column_name_handler
+from .handler.tables.update_table_column_type_handler import update_table_column_type_handler
+
+
+
+
+from .handler.tables.get_table_data_handler import get_table_data_handler
+from .handler.tables.update_dropdown_options_handler import update_dropdown_options_handler
+from .handler.tables.delete_table_column_handler import delete_table_column_handler
+from .handler.tables.get_sheet_cells_by_range_handler import get_sheet_cells_by_range_handler
+from .handler.tables.update_table_cells_by_range_handler import update_table_cells_by_range_handler
+
+from .handler.tables.add_table_records_handler import add_table_records_handler
 
 # Create an MCP server
 mcp = FastMCP("Google Sheets MCP")
@@ -140,7 +142,7 @@ except Exception as env_error:
 
 
 @mcp.tool()
-def list_spreadsheets_and_sheets_tool(
+def discover_spreadsheets_tool(
     max_spreadsheets: int = Field(default=10, description="Maximum number of spreadsheets to analyze")
 ) -> str:
     """
@@ -152,31 +154,31 @@ def list_spreadsheets_and_sheets_tool(
     Returns:
         JSON string containing spreadsheet names and their sheet names
     """
-    return list_spreadsheets_and_sheets_handler(
+    return discover_spreadsheets_handler(
         drive_service, sheets_service, max_spreadsheets
     )
 
 
 @mcp.tool()
-def rename_spreadsheet_title_tool(
+def update_spreadsheet_title_tool(
     spreadsheet_name: str = Field(..., description="The name of the spreadsheet to rename"),
     new_title: str = Field(..., description="The new title for the spreadsheet")
 ) -> str:
     """
-    Rename a Google Spreadsheet.
+    Update a Google Spreadsheet title.
     """
-    return rename_spreadsheet_handler(drive_service, sheets_service, spreadsheet_name, new_title)
+    return update_spreadsheet_title_handler(drive_service, sheets_service, spreadsheet_name, new_title)
 
 
 @mcp.tool()
-def add_sheets_tool(
+def create_sheets_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_names: List[str] = Field(..., description="List of sheet names to add as new sheets")
+    sheet_names: List[str] = Field(..., description="List of sheet names to create as new sheets")
 ) -> str:
     """
-    Add new sheets to a Google Spreadsheet.
+    Create new sheets in a Google Spreadsheet.
     """
-    return add_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names)
+    return create_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names)
 
 
 @mcp.tool()
@@ -191,53 +193,55 @@ def delete_sheets_tool(
 
 
 @mcp.tool()
-def duplicate_sheet_tool(
+def create_duplicate_sheet_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     source_sheet_name: str = Field(..., description="Name of the sheet to duplicate"),
     new_sheet_name: str = Field(default="", description="Name for the duplicated sheet (optional, will auto-generate if not provided)"),
     insert_position: int = Field(default=None, description="Position to insert the duplicated sheet (1-based index, optional - will insert at end if not specified)")
 ) -> str:
     """
-    Duplicate an existing sheet.
+    Create a duplicate of an existing sheet.
     """
-    return duplicate_sheet_handler(drive_service, sheets_service, spreadsheet_name, source_sheet_name, new_sheet_name, insert_position)
+    return create_duplicate_sheet_handler(drive_service, sheets_service, spreadsheet_name, source_sheet_name, new_sheet_name, insert_position)
 
 
 @mcp.tool()
-def rename_sheets_tool(
+def update_sheet_titles_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_names: List[str] = Field(..., description="List of sheet names to rename (put only the names of the sheets you want to rename)"),
     new_titles: List[str] = Field(..., description="List of new titles for the sheets")
 ) -> str:
     """
-    Rename sheets in a Google Spreadsheet.
+    Update sheet titles in a Google Spreadsheet.
     """
-    return rename_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names, new_titles)
+    return update_sheet_titles_handler(drive_service, sheets_service, spreadsheet_name, sheet_names, new_titles)
 
 
 @mcp.tool()
-def analyze_sheet_tool(
+def analyze_sheet_structure_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="Name of the specific sheet to analyze")
 ) -> str:
     """
-    Analyze a specific sheet's contents and structure.
+    Analyze a specific sheet's structure - quick overview.
     
-    This tool provides detailed analysis of a sheet's contents, including:
-    - Data distribution and patterns
-    - Cell types and formatting
-    - Empty vs. filled cells
-    - Potential data structures
-    - Complexity assessment
+    This tool provides a simple overview of what's in the sheet:
+    - Sheet basic info (name, size, hidden status)
+    - Tables (count, names, ranges, sizes)
+    - Charts (count, IDs, positions)
+    - Slicers (count, IDs, positions)
+    - Drawings (count, IDs, positions)
+    - Developer metadata (count, keys, values)
+    - Summary (total elements, sheet type, frozen panes)
     
     Args:
         spreadsheet_name: The name of the Google Spreadsheet
         sheet_name: Name of the specific sheet to analyze
     
     Returns:
-        JSON string with comprehensive analysis results
+        JSON string with simplified structure overview
     """
-    return analyze_sheet_handler(drive_service, sheets_service, spreadsheet_name, sheet_name)
+    return analyze_sheet_structure_handler(drive_service, sheets_service, spreadsheet_name, sheet_name)
 
 
 # Table Management Tools
@@ -299,51 +303,93 @@ def delete_table_tool(
 
 
 @mcp.tool()
-def rename_table_tool(
+def update_table_title_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    old_table_name: str = Field(..., description="Current name of the table to rename"),
-    new_table_name: str = Field(..., description="New name for the table")
+    old_table_name: str = Field(..., description="Current name of the table to update"),
+    new_table_name: str = Field(..., description="New title for the table")
 ) -> str:
     """
-    Rename a table in Google Sheets.
+    Update a table title in Google Sheets.
     
-    This tool allows you to change the name of an existing table.
+    This tool allows you to update the title of an existing table.
     The table structure and data remain unchanged.
     
     Args:
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        old_table_name: Current name of the table
-        new_table_name: New name for the table
+        old_table_name: Current name of the table to update
+        new_table_name: New title for the table
     
     Returns:
-        JSON string with success status and rename details
+        JSON string with success status and update details
     """
-    return rename_table_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, old_table_name, new_table_name)
+    return update_table_title_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, old_table_name, new_table_name)
 
 
 @mcp.tool()
 def get_table_metadata_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(default=None, description="Name of the table to get metadata for. If not provided, returns metadata for all tables in the sheet.")
+    table_name: str = Field(default=None, description="Name of the table to get metadata for. If not provided, returns metadata for all tables in the sheet."),
+    include_sample_data: bool = Field(default=False, description="Whether to include sample data rows"),
+    include_formulas: bool = Field(default=False, description="Whether to include formula information"),
+    include_formatting: bool = Field(default=False, description="Whether to include cell formatting details"),
+    include_statistics: bool = Field(default=False, description="Whether to include data statistics"),
+    max_sample_rows: int = Field(default=5, description="Maximum number of sample rows to return"),
+    specific_columns: List[str] = Field(default=None, description="List of column names to get metadata for (optional)"),
+    exclude_metadata_types: List[str] = Field(default=None, description="List of metadata types to exclude (e.g., ['sample_data', 'formatting', 'statistics', 'merges', 'conditional_formatting', 'filters'])")
 ) -> str:
     """
     Get comprehensive metadata for tables in Google Sheets.
     
     This tool provides detailed information about table structure, columns, data types,
-    and other properties. If no table name is provided, returns metadata for all tables.
+    formatting, statistics, and other properties. If no table name is provided, returns 
+    metadata for all tables.
+    
+    The metadata includes:
+    - Basic table information (name, ID, dimensions)
+    - Column details (names, types, validation rules)
+    - Header row information
+    - Frozen rows/columns
+    - Column dimensions (width)
+    - Merged cells
+    - Conditional formatting
+    - Filter information
+    - Last modified information
+    - Optional sample data
+    - Optional data statistics
+    - Optional formatting details
     
     Args:
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
         table_name: Name of the table to get metadata for (optional)
+        include_sample_data: Whether to include sample data rows
+        include_formulas: Whether to include formula information
+        include_formatting: Whether to include cell formatting details
+        include_statistics: Whether to include data statistics
+        max_sample_rows: Maximum number of sample rows to return
+        specific_columns: List of column names to get metadata for (optional)
+        exclude_metadata_types: List of metadata types to exclude
     
     Returns:
         JSON string containing table metadata or list of all tables
     """
-    return get_table_metadata_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name)
+    return get_table_metadata_handler(
+        drive_service,
+        sheets_service,
+        spreadsheet_name,
+        sheet_name,
+        table_name,
+        include_sample_data,
+        include_formulas,
+        include_formatting,
+        include_statistics,
+        max_sample_rows,
+        specific_columns,
+        exclude_metadata_types
+    )
 
 
 @mcp.tool()
@@ -407,27 +453,7 @@ def update_table_sorting_tool(
     return update_table_sorting_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_name, sort_order)
 
 
-@mcp.tool()
-def clear_table_data_tool(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to clear data from")
-) -> str:
-    """
-    Clear all data from a table while preserving the table structure.
-    
-    This tool removes all data rows from a table while keeping the table structure,
-    column definitions, and formatting intact.
-    
-    Args:
-        spreadsheet_name: Name of the spreadsheet
-        sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to clear data from
-    
-    Returns:
-        JSON string with success status and clearing details
-    """
-    return clear_table_data_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name)
+
 
 
 @mcp.tool()
@@ -435,160 +461,123 @@ def delete_table_records_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
     table_name: str = Field(..., description="Name of the table to delete records from"),
-    row_indices: List[int] = Field(..., description="List of row indices to delete (1-based, excluding header)")
+    record_numbers: List[int] = Field(..., description="List of record numbers to delete (1-based, excluding header)")
 ) -> str:
     """
     Delete specific records (rows) from a table.
     
     This tool removes specific records from a table while preserving the table structure.
-    Row indices are 1-based and exclude the header row.
+    Record numbers are 1-based and exclude the header row. Records are deleted in descending order
+    (bigger numbers first) to avoid index shifting issues.
     
     Args:
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
         table_name: Name of the table to delete records from
-        row_indices: List of row indices to delete (1-based, excluding header)
+        record_numbers: List of record numbers to delete (1-based, excluding header)
     
     Returns:
         JSON string with success status and deletion details
     """
-    return delete_table_records_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, row_indices)
+    return delete_table_records_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, record_numbers)
+
+
+
 
 @mcp.tool()
-def update_table_row_tool(
+def update_table_cells_by_notation_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
     table_name: str = Field(..., description="Name of the table to update"),
-    row_index: int = Field(..., description="Row index to update (1-based, excluding header)"),
-    data: List[Union[str, int, float, bool, None]] = Field(..., description="""List of values for the entire row.
+    cell_updates: List[Dict[str, Union[str, int, float, bool, None]]] = Field(..., description="""List of cell updates, each containing:
+    - cell_notation: Cell reference in A1 notation (e.g., 'A1', 'B5')
+    - value: New value for the cell (string, number, boolean, or None)
     
-    Must match the number of columns in the table.
-    Values can be strings, numbers, booleans, or None.
-    EXAMPLE: ['John Doe', 30, 'HR', 50000]
+    EXAMPLE: [
+        {"cell_notation": "A1", "value": "New Value"},
+        {"cell_notation": "B5", "value": 50000},
+        {"cell_notation": "C10", "value": True}
+    ]
     """)
 ) -> str:
     """
-    Update an entire row in a table.
+    Update specific cells in a table.
     
-    This tool updates all cells in a specific row with new values.
-    The data must match the number of columns in the table.
+    This tool updates multiple cells in a table with new values using A1 notation.
     
     Args:
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
         table_name: Name of the table to update
-        row_index: Row index to update (1-based, excluding header)
-        data: List of values for the entire row
+        cell_updates: List of cell updates with cell_notation and value
     
     Returns:
         JSON string with success status and update details
     """
-    return update_table_row_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, row_index, data)
-
-
-# @mcp.tool()
-# def update_table_cells_tool(
-#     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-#     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-#     table_name: str = Field(..., description="Name of the table to update"),
-#     cell_updates: List[Dict[str, Union[str, int, float, bool, None]]] = Field(..., description="""List of cell updates, each containing:
-#     - row_index: Row index (1-based, excluding header)
-#     - column_index: Column index (1-based)
-#     - value: New value for the cell (string, number, boolean, or None)
-    
-#     For single cell: [{"row_index": 1, "column_index": 2, "value": "New Value"}]
-#     For multiple cells: [{"row_index": 1, "column_index": 2, "value": "Value1"}, {"row_index": 2, "column_index": 3, "value": 50000}]
-#     """)
-# ) -> str:
-#     """
-#     Update single or multiple cells in a table.
-    
-#     This tool updates specific cells in a table with new values.
-#     Can handle both single cell updates and batch cell updates efficiently.
-#     Each cell update must specify row index, column index, and new value.
-    
-#     Args:
-#         spreadsheet_name: Name of the spreadsheet
-#         sheet_name: Name of the sheet containing the table
-#         table_name: Name of the table to update
-#         cell_updates: List of cell updates with row_index, column_index, and value
-    
-#     Returns:
-#         JSON string with success status and update details
-#     """
-#     return update_table_cells_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, cell_updates)
-
-
-# @mcp.tool()
-# def find_table_cells_tool(
-#     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-#     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-#     table_name: str = Field(..., description="Name of the table to search in"),
-#     search_value: Union[str, int, float, bool] = Field(..., description="Value to search for"),
-#     search_type: str = Field(default="exact", description="Type of search: 'exact', 'contains', 'starts_with', 'ends_with' (default: 'exact')"),
-#     case_sensitive: bool = Field(default=False, description="Whether search should be case sensitive (default: False)"),
-#     include_headers: bool = Field(default=False, description="Whether to include header row in search (default: False)")
-# ) -> str:
-#     """
-#     Find specific values in table cells.
-    
-#     This tool searches for values in table cells using various search methods.
-#     You can search for exact matches, partial matches, or pattern matches.
-    
-#     Args:
-#         spreadsheet_name: Name of the spreadsheet
-#         sheet_name: Name of the sheet containing the table
-#         table_name: Name of the table to search in
-#         search_value: Value to search for
-#         search_type: Type of search - "exact", "contains", "starts_with", "ends_with"
-#         case_sensitive: Whether search should be case sensitive
-#         include_headers: Whether to include header row in search
-    
-#     Returns:
-#         JSON string with found cells data and metadata
-#     """
-#     return find_table_cells_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, search_value, search_type, case_sensitive, include_headers)
+    return update_table_cells_by_notation_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, cell_updates)
 
 
 @mcp.tool()
-def rename_table_column_tool(
+def get_sheet_cells_by_notation_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet to get cells from"),
+    cell_notations: List[str] = Field(..., description="List of cell notations to get values from (e.g., ['A1', 'A6', 'A10', 'E5'])")
+) -> str:
+    """
+    Get values from specific cells in a sheet.
+    
+    This tool retrieves values from multiple cells in a sheet using A1 notation.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet to get cells from
+        cell_notations: List of cell notations (e.g., ['A1', 'A6', 'A10', 'E5'])
+    
+    Returns:
+        JSON string with cell values and mapping
+    """
+    return get_sheet_cells_by_notation_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, cell_notations)
+
+
+@mcp.tool()
+def update_table_column_name_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to rename columns in"),
-    column_indices: List[int] = Field(..., description="List of column indices to rename (0-based)"),
+    table_name: str = Field(..., description="Name of the table to update column names in"),
+    column_indices: List[int] = Field(..., description="List of column indices to update (0-based)"),
     new_column_names: List[str] = Field(..., description="List of new column names (must match column_indices count)")
 ) -> str:
     """
-    Rename columns in a table.
+    Update column names in a table.
     
-    This tool renames existing columns in a table by their index.
+    This tool updates existing column names in a table by their index.
     The number of column indices must match the number of new column names.
     
     Args:
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to rename columns in
-        column_indices: List of column indices to rename (0-based)
+        table_name: Name of the table to update column names in
+        column_indices: List of column indices to update (0-based)
         new_column_names: List of new column names
     
     Returns:
-        JSON string with success status and rename details
+        JSON string with success status and update details
     """
-    return rename_table_column_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_indices, new_column_names)
+    return update_table_column_name_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_indices, new_column_names)
 
 
 @mcp.tool()
-def change_table_column_type_tool(
+def update_table_column_type_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to change column types in"),
-    column_names: List[str] = Field(..., description="List of column names to change types for"),
+    table_name: str = Field(..., description="Name of the table to update column types in"),
+    column_names: List[str] = Field(..., description="List of column names to update types for"),
     new_column_types: List[str] = Field(..., description="List of new column types (must match column_names count)")
 ) -> str:
     """
-    Change column types in a table.
+    Update column types in a table.
     
-    This tool changes the data type of existing columns in a table.
+    This tool updates the data type of existing columns in a table.
     The number of column names must match the number of new column types.
     
     Available column types:
@@ -605,41 +594,18 @@ def change_table_column_type_tool(
     Args:
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to change column types in
-        column_names: List of column names to change types for
+        table_name: Name of the table to update column types in
+        column_names: List of column names to update types for
         new_column_types: List of new column types
     
     Returns:
-        JSON string with success status and type change details
+        JSON string with success status and type update details
     """
-    return change_table_column_type_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_names, new_column_types)
+    return update_table_column_type_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_names, new_column_types)
 
 
 
-@mcp.tool()
-def toggle_table_footer_tool(
-    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
-    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to toggle footer for"),
-    action: str = Field(..., description="Action to perform: 'add' or 'remove'")
-) -> str:
-    """
-    Toggle table footer in Google Sheets.
-    
-    This tool can add or remove a footer row from a table by updating the table range.
-    Adding a footer extends the table by one row at the bottom.
-    Removing a footer reduces the table by one row from the bottom.
-    
-    Args:
-        spreadsheet_name: Name of the spreadsheet
-        sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to toggle footer for
-        action: Action to perform - "add" or "remove"
-    
-    Returns:
-        JSON string with success status and toggle details
-    """
-    return toggle_table_footer_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, action)
+
 
 
 
@@ -678,33 +644,33 @@ def get_table_data_tool(
 
 
 @mcp.tool()
-def manage_dropdown_options_tool(
+def update_dropdown_options_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to manage dropdown options in"),
+    table_name: str = Field(..., description="Name of the table to update dropdown options in"),
     action: str = Field(..., description="Action to perform: 'add' or 'remove'"),
-    column_names: List[str] = Field(..., description="List of column names to manage dropdown options for"),
-    dropdown_options: Optional[List[List[str]]] = Field(default=[], description="List of dropdown options to add/remove for each column (required for 'add' and 'remove' actions)")
+    column_name: str = Field(..., description="Name of the column to update dropdown options for"),
+    dropdown_options: List[str] = Field(default=[], description="List of dropdown options to add/remove (required for 'add' and 'remove' actions)")
 ) -> str:
     """
-    Manage dropdown options in table columns.
+    Update dropdown options in a table column.
     
-    This tool can add or remove specific dropdown options from existing columns in a table.
+    This tool can add or remove specific dropdown options from an existing column in a table.
     For 'add' action: Adds new options to existing dropdown (preserves existing options).
     For 'remove' action: Removes specific options from existing dropdown.
     
     Args:
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to manage dropdown options in
+        table_name: Name of the table to update dropdown options in
         action: Action to perform - "add" or "remove"
-        column_names: List of column names to manage dropdown options for
-        dropdown_options: List of dropdown options to add/remove for each column
+        column_name: Name of the column to update dropdown options for
+        dropdown_options: List of dropdown options to add/remove
     
     Returns:
-        JSON string with success status and dropdown management details
+        JSON string with success status and dropdown update details
     """
-    return manage_dropdown_options_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, action, column_names, dropdown_options)
+    return update_dropdown_options_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, action, column_name, dropdown_options)
 
 
 @mcp.tool()
@@ -740,11 +706,11 @@ def delete_table_column_tool(
 
 
 @mcp.tool()
-def insert_table_records_tool(
+def add_table_records_tool(
     spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
     sheet_name: str = Field(..., description="The name of the sheet containing the table"),
-    table_name: str = Field(..., description="Name of the table to insert records into"),
-    records: List[List[Union[str, int, float, bool, None]]] = Field(..., description="""List of records to insert into the table.
+    table_name: str = Field(..., description="Name of the table to add records into"),
+    records: List[List[Union[str, int, float, bool, None]]] = Field(..., description="""List of records to add into the table.
     
     Each record must be a list of values matching the table's column structure.
     Values can be strings, numbers, booleans, or None.
@@ -757,22 +723,104 @@ def insert_table_records_tool(
     """)
 ) -> str:
     """
-    Insert records (rows) into a table in Google Sheets at the end.
+    Add records (rows) into a table in Google Sheets at the end.
     
-    This tool inserts new records into a table at the end using InsertRangeRequest,
+    This tool adds new records into a table at the end using InsertRangeRequest,
     UpdateCellsRequest, and UpdateTableRequest operations. Each record must match the table's column structure.
     Records are automatically formatted according to column types.
     
     Args:
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to insert records into
+        table_name: Name of the table to add records into
         records: List of records, where each record is a list of values matching table columns
     
     Returns:
         JSON string with success status and operation details
     """
-    return insert_table_records_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, records)
+    return add_table_records_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, records)
+
+
+@mcp.tool()
+def get_sheet_cells_by_range_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet to get cells from"),
+    start_cell: str = Field(..., description="Starting cell reference (e.g., 'A1', 'B2')"),
+    end_cell: str = Field(..., description="Ending cell reference (e.g., 'C5', 'D10')"),
+    include_headers: bool = Field(default=False, description="Whether to include header row (default: False)")
+) -> str:
+    """
+    Get sheet cells by range.
+    
+    This tool retrieves cell data from a specific range within a sheet.
+    You can specify the exact cell range using A1 notation.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet to get cells from
+        start_cell: Starting cell reference (e.g., 'A1', 'B2')
+        end_cell: Ending cell reference (e.g., 'C5', 'D10')
+        include_headers: Whether to include header row
+    
+    Returns:
+        JSON string with cells data and metadata
+    """
+    return get_sheet_cells_by_range_handler(
+        drive_service, 
+        sheets_service, 
+        spreadsheet_name, 
+        sheet_name, 
+        start_cell, 
+        end_cell, 
+        include_headers
+    )
+
+
+@mcp.tool()
+def update_table_cells_by_range_tool(
+    spreadsheet_name: str = Field(..., description="The name of the Google Spreadsheet"),
+    sheet_name: str = Field(..., description="The name of the sheet containing the table"),
+    table_name: str = Field(..., description="Name of the table to update"),
+    start_cell: str = Field(..., description="Starting cell reference (e.g., 'A1', 'B2')"),
+    end_cell: str = Field(..., description="Ending cell reference (e.g., 'C5', 'D10')"),
+    cell_values: List[List[Union[str, int, float, bool, None]]] = Field(..., description="""2D array of values to update (rows x columns)
+    
+    Must match the range dimensions based on start_cell and end_cell.
+    
+    EXAMPLE: For range 'A1:C2', you need 2 rows x 3 columns:
+    [
+        ['Value1', 'Value2', 'Value3'],
+        ['Value4', 'Value5', 'Value6']
+    ]
+    """)
+) -> str:
+    """
+    Update table cells by range.
+    
+    This tool updates cell data in a specific range within a table.
+    You can specify the exact cell range using A1 notation.
+    
+    Args:
+        spreadsheet_name: Name of the spreadsheet
+        sheet_name: Name of the sheet containing the table
+        table_name: Name of the table to update
+        start_cell: Starting cell reference (e.g., 'A1', 'B2')
+        end_cell: Ending cell reference (e.g., 'C5', 'D10')
+        cell_values: 2D array of values to update (rows x columns)
+    
+    Returns:
+        JSON string with update details
+    """
+    return update_table_cells_by_range_handler(
+        drive_service, 
+        sheets_service, 
+        spreadsheet_name, 
+        sheet_name, 
+        table_name, 
+        start_cell, 
+        end_cell, 
+        cell_values
+    )
 
 
 if __name__ == "__main__":

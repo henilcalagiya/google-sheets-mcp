@@ -193,6 +193,9 @@ def get_table_info(
                             column_info["dataValidationRule"] = data_validation
                         columns.append(column_info)
                     
+                    # Calculate range notation
+                    range_notation = f"{column_index_to_letter(start_col)}{start_row + 1}:{column_index_to_letter(end_col - 1)}{end_row}"
+                    
                     return {
                         "table_id": table_id,
                         "table_name": table.get("displayName") or table.get("name") or f"Table{table_id}",
@@ -203,6 +206,7 @@ def get_table_info(
                         "end_row": end_row,
                         "start_col": start_col,
                         "end_col": end_col,
+                        "range_notation": range_notation,
                         "columns": columns
                     }
         
@@ -350,14 +354,14 @@ def column_index_to_letter(column_index: int) -> str:
     if column_index < 0:
         raise ValueError("Column index must be non-negative")
     
-    if column_index == 0:
-        return "A"
+    # Convert to 1-based for Excel algorithm
+    column_index_1based = column_index + 1
     
     result = ""
-    while column_index > 0:
-        column_index -= 1
-        result = chr(65 + (column_index % 26)) + result
-        column_index //= 26
+    while column_index_1based > 0:
+        column_index_1based -= 1
+        result = chr(65 + (column_index_1based % 26)) + result
+        column_index_1based //= 26
     
     return result
 

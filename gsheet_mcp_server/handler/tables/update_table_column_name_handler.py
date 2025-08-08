@@ -1,4 +1,4 @@
-"""Handler for changing table column types in Google Sheets."""
+"""Handler for updating table column names in Google Sheets."""
 
 from typing import List, Dict, Any
 from googleapiclient.errors import HttpError
@@ -7,40 +7,37 @@ from gsheet_mcp_server.helper.spreadsheet_utils import get_spreadsheet_id_by_nam
 from gsheet_mcp_server.helper.sheets_utils import get_sheet_ids_by_names
 from gsheet_mcp_server.helper.tables_utils import (
     get_table_ids_by_names,
-    get_table_info,
-    validate_column_type,
-    map_column_type,
-    get_number_format_for_type
+    get_table_info
 )
 from gsheet_mcp_server.helper.json_utils import compact_json_response
 
-def change_table_column_type_handler(
+def update_table_column_name_handler(
     drive_service,
     sheets_service,
     spreadsheet_name: str,
     sheet_name: str,
     table_name: str,
-    column_names: List[str],
-    new_column_types: List[str]
+    column_indices: List[int],
+    new_column_names: List[str]
 ) -> str:
     """
-    Change column types in a table in Google Sheets using the official updateTable operation.
+    Update column names in a table in Google Sheets using the official updateTable operation.
     
-    According to the official Google Sheets API documentation, to change column types:
-    1. Use UpdateTableRequest to update column properties with new types
-    2. Apply proper formatting to existing data based on new types
+    According to the official Google Sheets API documentation, to update table column names:
+    1. Use UpdateTableRequest to update column properties including column names
+    2. Update both the column properties and header cells
     
     Args:
         drive_service: Google Drive service instance
         sheets_service: Google Sheets service instance
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
-        table_name: Name of the table to change column types in
-        column_names: List of column names to change types for
-        new_column_types: List of new column types (must match column_names count)
+        table_name: Name of the table to update column names in
+        column_indices: List of column indices to update (0-based)
+        new_column_names: List of new column names (must match column_indices count)
     
     Returns:
-        str: Success message with type change details or error message
+        str: Success message with update details or error message
     """
     try:
         # Validate inputs
@@ -50,56 +47,54 @@ def change_table_column_type_handler(
                 "message": "Table name is required."
             })
         
-        if not column_names or not isinstance(column_names, list):
+        if not column_indices or not isinstance(column_indices, list):
             return compact_json_response({
                 "success": False,
-                "message": "Column names are required and must be a list."
+                "message": "Column indices are required and must be a list."
             })
         
-        if not new_column_types or not isinstance(new_column_types, list):
+        if not new_column_names or not isinstance(new_column_names, list):
             return compact_json_response({
                 "success": False,
-                "message": "New column types are required and must be a list."
+                "message": "New column names are required and must be a list."
             })
         
-        if len(column_names) != len(new_column_types):
+        if len(column_indices) != len(new_column_names):
             return compact_json_response({
                 "success": False,
-                "message": "Number of column names must match number of new column types."
+                "message": "Number of column indices must match number of new column names."
             })
         
-        # Validate column names and types
-        validated_changes = []
-        invalid_changes = []
+        # Validate column indices and names
+        validated_renames = []
+        invalid_renames = []
         
-        for i, (col_name, col_type) in enumerate(zip(column_names, new_column_types)):
-            if not col_name or not isinstance(col_name, str) or col_name.strip() == "":
-                invalid_changes.append({"index": i, "column": col_name, "error": "Column name cannot be empty"})
+        for i, (col_index, new_name) in enumerate(zip(column_indices, new_column_names)):
+            if not isinstance(col_index, int) or col_index < 0:
+                invalid_renames.append({"index": i, "column_index": col_index, "error": "Column index must be a non-negative integer"})
                 continue
             
-            # Validate column type
-            type_validation = validate_column_type(col_type)
-            if not type_validation["valid"]:
-                invalid_changes.append({"index": i, "column": col_name, "error": type_validation["error"]})
+            if not new_name or not isinstance(new_name, str) or new_name.strip() == "":
+                invalid_renames.append({"index": i, "new_name": new_name, "error": "New column name cannot be empty"})
                 continue
             
-            validated_changes.append({
-                "column_name": col_name.strip(),
-                "new_type": type_validation["cleaned_type"]
+            validated_renames.append({
+                "column_index": col_index,
+                "new_name": new_name.strip()
             })
         
-        if invalid_changes:
-            error_messages = [f"Change {item['index']+1} ({item['column']}): {item['error']}" for item in invalid_changes]
+        if invalid_renames:
+            error_messages = [f"Rename {item['index']+1}: {item['error']}" for item in invalid_renames]
             return compact_json_response({
                 "success": False,
-                "message": f"Invalid column type changes: {'; '.join(error_messages)}",
-                "invalid_changes": invalid_changes
+                "message": f"Invalid column renames: {'; '.join(error_messages)}",
+                "invalid_renames": invalid_renames
             })
         
-        if not validated_changes:
+        if not validated_renames:
             return compact_json_response({
                 "success": False,
-                "message": "No valid column type changes provided after validation."
+                "message": "No valid column renames provided after validation."
             })
         
         # Get spreadsheet ID
@@ -132,42 +127,44 @@ def change_table_column_type_handler(
         try:
             table_info = get_table_info(sheets_service, spreadsheet_id, table_id)
             columns = table_info.get('columns', [])
+            table_range = table_info.get('range', {})
         except Exception as e:
             return compact_json_response({
                 "success": False,
                 "message": f"Could not retrieve information for table '{table_name}': {str(e)}"
             })
         
-        # Create mapping of column names to new types
-        type_mapping = {change["column_name"]: change["new_type"] for change in validated_changes}
+        # Validate that all column indices exist in the table
+        existing_column_count = len(columns)
+        invalid_indices = []
+        valid_renames = []
         
-        # Validate that all specified columns exist in the table
-        existing_column_names = [col.get("name", "") for col in columns]
-        missing_columns = []
-        valid_changes = []
-        
-        for change in validated_changes:
-            if change["column_name"] not in existing_column_names:
-                missing_columns.append(change["column_name"])
+        for rename in validated_renames:
+            col_index = rename["column_index"]
+            if col_index >= existing_column_count:
+                invalid_indices.append(col_index)
             else:
-                valid_changes.append(change)
+                valid_renames.append(rename)
         
-        if missing_columns:
+        if invalid_indices:
             return compact_json_response({
                 "success": False,
-                "message": f"Column(s) not found in table: {', '.join(missing_columns)}"
+                "message": f"Invalid column indices: {invalid_indices}. Table has {existing_column_count} columns (0-based indexing)."
             })
         
-        if not valid_changes:
+        if not valid_renames:
             return compact_json_response({
                 "success": False,
-                "message": "No valid column type changes after validation."
+                "message": "No valid column renames after validation."
             })
         
         # Create batch update requests
         requests = []
         
-        # Convert existing columns to API format and update column types
+        # Create mapping of column indices to new names
+        rename_mapping = {rename["column_index"]: rename["new_name"] for rename in valid_renames}
+        
+        # Convert existing columns to API format and update column names
         updated_column_properties = []
         for col in columns:
             col_name = col.get("name", "")
@@ -177,12 +174,12 @@ def change_table_column_type_handler(
             # Create API format column property
             api_col_prop = {
                 "columnIndex": col_index,
-                "columnName": col_name,
-                "columnType": map_column_type(type_mapping.get(col_name, col_type))  # Use new type if in mapping, otherwise keep existing
+                "columnName": rename_mapping.get(col_index, col_name),  # Use new name if in mapping, otherwise keep old
+                "columnType": col_type
             }
             
-            # Preserve existing dataValidationRule if it exists and column type isn't being changed
-            if "dataValidationRule" in col and col_name not in type_mapping:
+            # Preserve dataValidationRule if it exists
+            if "dataValidationRule" in col:
                 api_col_prop["dataValidationRule"] = col["dataValidationRule"]
             
             updated_column_properties.append(api_col_prop)
@@ -194,7 +191,7 @@ def change_table_column_type_handler(
                     "tableId": table_id,
                     "columnProperties": updated_column_properties
                 },
-                "fields": "columnProperties.columnName,columnProperties.columnType"
+                "fields": "columnProperties.columnName"
             }
         }
         requests.append(update_table_request)
@@ -207,16 +204,16 @@ def change_table_column_type_handler(
         
         # Extract response information
         replies = response.get("replies", [])
-        successful_changes = len(valid_changes)
+        successful_renames = len(valid_renames)
         
         response_data = {
             "success": True,
             "spreadsheet_name": spreadsheet_name,
             "sheet_name": sheet_name,
             "table_name": table_name,
-            "columns_updated": successful_changes,
-            "type_changes": valid_changes,
-            "message": f"Successfully changed types for {successful_changes} column(s) in table '{table_name}' in '{sheet_name}'"
+            "columns_renamed": successful_renames,
+            "renames": valid_renames,
+            "message": f"Successfully renamed {successful_renames} column(s) in table '{table_name}' in '{sheet_name}'"
         }
         
         return compact_json_response(response_data)
@@ -229,5 +226,5 @@ def change_table_column_type_handler(
     except Exception as e:
         return compact_json_response({
             "success": False,
-            "message": f"Error changing table column types: {str(e)}"
+            "message": f"Error renaming table columns: {str(e)}"
         }) 

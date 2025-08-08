@@ -2,7 +2,7 @@ from typing import Dict, Any, List
 from googleapiclient.errors import HttpError
 from gsheet_mcp_server.helper.json_utils import compact_json_response
 
-def list_spreadsheets_and_sheets(
+def discover_spreadsheets(
     drive_service,
     sheets_service,
     max_spreadsheets: int = 10
@@ -79,17 +79,17 @@ def list_spreadsheets_and_sheets(
             "message": f"Error discovering spreadsheets: {str(e)}"
         }
 
-def list_spreadsheets_and_sheets_handler(
+def discover_spreadsheets_handler(
     drive_service,
     sheets_service,
     max_spreadsheets: int = 10
 ) -> str:
     """
-    Handler for listing spreadsheets and their sheet names.
+    Handler for discovering spreadsheets and their sheet names.
     """
-    result = list_spreadsheets_and_sheets(
+    result = discover_spreadsheets(
         drive_service=drive_service,
         sheets_service=sheets_service,
         max_spreadsheets=max_spreadsheets
     )
-    return compact_json_response(result) 
+    return compact_json_response(result)
