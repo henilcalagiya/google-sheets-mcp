@@ -80,10 +80,22 @@ jobs:
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         uv build
         
+        # Get the current version from pyproject.toml
+        VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+        echo "Checking package version: $VERSION"
+        
         # Check package contents for credentials
         python -c "
         import tarfile
-        t = tarfile.open('dist/google_sheets_mcp-0.1.0.tar.gz')
+        import os
+        version = os.popen('python -c \"import tomllib; print(tomllib.load(open(\\\"pyproject.toml\\\", \\\"rb\\\"))[\\\"project\\\"][\\\"version\\\"]\"').read().strip()
+        package_file = f'dist/google_sheets_mcp-{version}.tar.gz'
+        
+        if not os.path.exists(package_file):
+            print(f'❌ Package file not found: {package_file}')
+            exit(1)
+            
+        t = tarfile.open(package_file)
         files = [f.name for f in t.getmembers() if f.name.endswith('.py')]
         
         # Check if any Python files contain credential patterns
