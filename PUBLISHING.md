@@ -120,15 +120,25 @@ python -c "import gsheet_mcp_server; print('✅ Successfully installed')"
 
 2. ✅ **Verify package contents**:
    ```bash
-   # Check what's in the package
-   python -c "import tarfile; t = tarfile.open('dist/google_sheets_mcp-0.1.0.tar.gz'); [print(f.name) for f in t.getmembers() if f.name.endswith('.py')]"
-   ```
+   # Check package contents
+   python -c "
+   import tarfile
+   import os
+   version = os.popen('python -c \"import tomllib; print(tomllib.load(open(\\\"pyproject.toml\\\", \\\"rb\\\"))[\\\"project\\\"][\\\"version\\\"]\"').read().strip()
+   package_file = f'dist/google_sheets_mcp-{version}.tar.gz'
+   t = tarfile.open(package_file)
+   [print(f.name) for f in t.getmembers() if f.name.endswith('.py')]
+   "
 
-3. ✅ **Test installation**:
-   ```bash
-   # Test the package locally
-   pip install dist/google_sheets_mcp-0.1.0-py3-none-any.whl
-   python -c "import gsheet_mcp_server; print('✅ Package works')"
+   # Test wheel installation
+   python -c "
+   import os
+   version = os.popen('python -c \"import tomllib; print(tomllib.load(open(\\\"pyproject.toml\\\", \\\"rb\\\"))[\\\"project\\\"][\\\"version\\\"]\"').read().strip()
+   wheel_file = f'dist/google_sheets_mcp-{version}-py3-none-any.whl'
+   import subprocess
+   subprocess.run(['pip', 'install', wheel_file], check=True)
+   print('✅ Wheel installation successful')
+   "
    ```
 
 ### Security Checklist:
