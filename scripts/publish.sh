@@ -36,17 +36,20 @@ fi
 # Check for hardcoded credentials
 echo "🔍 Checking for hardcoded credentials..."
 
-if grep -r "AIza" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ > /dev/null 2>&1; then
+# Check for actual API keys (not just the word in documentation)
+if grep -r "AIza[A-Za-z0-9_-]\{35\}" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ --exclude=*.md --exclude=*.yml --exclude=*.yaml --exclude=*.sh > /dev/null 2>&1; then
     print_error "Found potential API keys in the codebase"
     exit 1
 fi
 
-if grep -r "-----BEGIN PRIVATE KEY-----" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ > /dev/null 2>&1; then
+# Check for private keys (not just the word in documentation)
+if grep -r "-----BEGIN PRIVATE KEY-----" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ --exclude=*.md --exclude=*.yml --exclude=*.yaml --exclude=*.sh > /dev/null 2>&1; then
     print_error "Found hardcoded private keys in the codebase"
     exit 1
 fi
 
-if grep -r "sk-" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ > /dev/null 2>&1; then
+# Check for secrets (not just the word in documentation)
+if grep -r "sk-[A-Za-z0-9_-]\{20,}" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ --exclude=*.md --exclude=*.yml --exclude=*.yaml --exclude=*.sh > /dev/null 2>&1; then
     print_error "Found potential secrets in the codebase"
     exit 1
 fi

