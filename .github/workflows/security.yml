@@ -45,9 +45,21 @@ jobs:
       run: |
         echo "🔍 Checking for sensitive files..."
         
-        # Check if any .mcp.json files are being committed
-        if find . -name "*.mcp.json" -not -path "./.git/*"; then
+        # Check if any actual credential files are being committed (exclude examples)
+        if find . -name "*.mcp.json" -not -path "./.git/*" -not -name "sample-mcp-config.json" -not -name "*example*" -not -name "*template*"; then
           echo "❌ Found MCP config files that might contain credentials"
+          exit 1
+        fi
+        
+        # Check for actual credential files with real data
+        if find . -name "credentials*.json" -not -path "./.git/*" -not -name "*example*" -not -name "*template*"; then
+          echo "❌ Found credential files that might contain real data"
+          exit 1
+        fi
+        
+        # Check for environment files with real data
+        if find . -name ".env*" -not -path "./.git/*" -not -name "*example*" -not -name "*template*"; then
+          echo "❌ Found environment files that might contain real data"
           exit 1
         fi
         
