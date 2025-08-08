@@ -21,6 +21,8 @@ jobs:
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        uv venv
+        source .venv/bin/activate
         uv pip install toml
     
     - name: Check for hardcoded credentials
