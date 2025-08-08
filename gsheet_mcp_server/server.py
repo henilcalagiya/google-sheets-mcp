@@ -1,4 +1,4 @@
-"""Google Sheets MCP Server using FastMCP - Simplified Version."""
+"""Google Sheets MCP Server using FastMCP - Environment Variables Version."""
 
 # Standard library imports
 import json
@@ -60,6 +60,18 @@ from .handler.tables.add_table_records_handler import add_table_records_handler
 # Create an MCP server
 mcp = FastMCP("Google Sheets MCP")
 
+# Global variables for services (will be initialized lazily)
+_sheets_service = None
+_drive_service = None
+
+def _get_google_services():
+    """Get or initialize Google services lazily."""
+    global _sheets_service, _drive_service
+    
+    if _sheets_service is None or _drive_service is None:
+        _sheets_service, _drive_service = _setup_google_services_from_env()
+    
+    return _sheets_service, _drive_service
 
 def _setup_google_services_from_env():
     """Set up Google Sheets and Drive API services from environment variables."""
@@ -120,27 +132,6 @@ def _setup_google_services_from_env():
     except Exception as e:
         raise RuntimeError(f"Failed to setup Google services from environment variables: {str(e)}")
 
-# Removed _setup_google_services function - using environment variables only
-
-
-# Initialize services using environment variables only
-try:
-    sheets_service, drive_service = _setup_google_services_from_env()
-    print("✅ Google services initialized from environment variables")
-except Exception as env_error:
-    print(f"❌ Failed to initialize Google services from environment variables: {env_error}")
-    print("📋 Required environment variables:")
-    print("  - GOOGLE_PROJECT_ID")
-    print("  - GOOGLE_PRIVATE_KEY_ID") 
-    print("  - GOOGLE_PRIVATE_KEY")
-    print("  - GOOGLE_CLIENT_EMAIL")
-    print("  - GOOGLE_CLIENT_ID")
-    print("  - GOOGLE_CLIENT_X509_CERT_URL")
-    print("\n💡 Use the helper script to extract from your credentials file:")
-    print("  python3 update_mcp_config.py path/to/your/credentials.json")
-    raise ValueError("Google credentials environment variables are required")
-
-
 @mcp.tool()
 def discover_spreadsheets_tool(
     max_spreadsheets: int = Field(default=10, description="Maximum number of spreadsheets to analyze")
@@ -154,6 +145,7 @@ def discover_spreadsheets_tool(
     Returns:
         JSON string containing spreadsheet names and their sheet names
     """
+    sheets_service, drive_service = _get_google_services()
     return discover_spreadsheets_handler(
         drive_service, sheets_service, max_spreadsheets
     )
@@ -167,6 +159,7 @@ def update_spreadsheet_title_tool(
     """
     Update a Google Spreadsheet title.
     """
+    sheets_service, drive_service = _get_google_services()
     return update_spreadsheet_title_handler(drive_service, sheets_service, spreadsheet_name, new_title)
 
 
@@ -178,6 +171,7 @@ def create_sheets_tool(
     """
     Create new sheets in a Google Spreadsheet.
     """
+    sheets_service, drive_service = _get_google_services()
     return create_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names)
 
 
@@ -189,6 +183,7 @@ def delete_sheets_tool(
     """
     Delete sheets from a Google Spreadsheet.
     """
+    sheets_service, drive_service = _get_google_services()
     return delete_sheets_handler(drive_service, sheets_service, spreadsheet_name, sheet_names)
 
 
@@ -202,6 +197,7 @@ def create_duplicate_sheet_tool(
     """
     Create a duplicate of an existing sheet.
     """
+    sheets_service, drive_service = _get_google_services()
     return create_duplicate_sheet_handler(drive_service, sheets_service, spreadsheet_name, source_sheet_name, new_sheet_name, insert_position)
 
 
@@ -214,6 +210,7 @@ def update_sheet_titles_tool(
     """
     Update sheet titles in a Google Spreadsheet.
     """
+    sheets_service, drive_service = _get_google_services()
     return update_sheet_titles_handler(drive_service, sheets_service, spreadsheet_name, sheet_names, new_titles)
 
 
@@ -241,10 +238,9 @@ def analyze_sheet_structure_tool(
     Returns:
         JSON string with simplified structure overview
     """
+    sheets_service, drive_service = _get_google_services()
     return analyze_sheet_structure_handler(drive_service, sheets_service, spreadsheet_name, sheet_name)
 
-
-# Table Management Tools
 
 @mcp.tool()
 def create_table_tool(
@@ -276,6 +272,7 @@ def create_table_tool(
     Returns:
         JSON string with success status and table details
     """
+    sheets_service, drive_service = _get_google_services()
     return create_table_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, start_cell, column_names, column_types, dropdown_columns, dropdown_values)
 
 
@@ -299,6 +296,7 @@ def delete_table_tool(
     Returns:
         JSON string with success status and deletion details
     """
+    sheets_service, drive_service = _get_google_services()
     return delete_table_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_names)
 
 
@@ -324,6 +322,7 @@ def update_table_title_tool(
     Returns:
         JSON string with success status and update details
     """
+    sheets_service, drive_service = _get_google_services()
     return update_table_title_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, old_table_name, new_table_name)
 
 
@@ -347,20 +346,6 @@ def get_table_metadata_tool(
     formatting, statistics, and other properties. If no table name is provided, returns 
     metadata for all tables.
     
-    The metadata includes:
-    - Basic table information (name, ID, dimensions)
-    - Column details (names, types, validation rules)
-    - Header row information
-    - Frozen rows/columns
-    - Column dimensions (width)
-    - Merged cells
-    - Conditional formatting
-    - Filter information
-    - Last modified information
-    - Optional sample data
-    - Optional data statistics
-    - Optional formatting details
-    
     Args:
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet containing the table
@@ -376,6 +361,7 @@ def get_table_metadata_tool(
     Returns:
         JSON string containing table metadata or list of all tables
     """
+    sheets_service, drive_service = _get_google_services()
     return get_table_metadata_handler(
         drive_service,
         sheets_service,
@@ -423,6 +409,7 @@ def add_table_column_tool(
     Returns:
         JSON string with success status and column addition details
     """
+    sheets_service, drive_service = _get_google_services()
     return add_table_column_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_names, column_types, positions, dropdown_columns, dropdown_values)
 
 
@@ -450,10 +437,8 @@ def update_table_sorting_tool(
     Returns:
         JSON string with success status and sorting details
     """
+    sheets_service, drive_service = _get_google_services()
     return update_table_sorting_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_name, sort_order)
-
-
-
 
 
 @mcp.tool()
@@ -479,9 +464,8 @@ def delete_table_records_tool(
     Returns:
         JSON string with success status and deletion details
     """
+    sheets_service, drive_service = _get_google_services()
     return delete_table_records_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, record_numbers)
-
-
 
 
 @mcp.tool()
@@ -514,6 +498,7 @@ def update_table_cells_by_notation_tool(
     Returns:
         JSON string with success status and update details
     """
+    sheets_service, drive_service = _get_google_services()
     return update_table_cells_by_notation_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, cell_updates)
 
 
@@ -531,11 +516,12 @@ def get_sheet_cells_by_notation_tool(
     Args:
         spreadsheet_name: Name of the spreadsheet
         sheet_name: Name of the sheet to get cells from
-        cell_notations: List of cell notations (e.g., ['A1', 'A6', 'A10', 'E5'])
+        cell_notations: List of cell notations to get values from (e.g., ['A1', 'A6', 'A10', 'E5'])
     
     Returns:
         JSON string with cell values and mapping
     """
+    sheets_service, drive_service = _get_google_services()
     return get_sheet_cells_by_notation_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, cell_notations)
 
 
@@ -563,6 +549,7 @@ def update_table_column_name_tool(
     Returns:
         JSON string with success status and update details
     """
+    sheets_service, drive_service = _get_google_services()
     return update_table_column_name_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_indices, new_column_names)
 
 
@@ -601,12 +588,8 @@ def update_table_column_type_tool(
     Returns:
         JSON string with success status and type update details
     """
+    sheets_service, drive_service = _get_google_services()
     return update_table_column_type_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_names, new_column_types)
-
-
-
-
-
 
 
 @mcp.tool()
@@ -640,6 +623,7 @@ def get_table_data_tool(
     Returns:
         JSON string with table data and metadata
     """
+    sheets_service, drive_service = _get_google_services()
     return get_table_data_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, column_names, start_row, end_row, include_headers, max_rows)
 
 
@@ -670,6 +654,7 @@ def update_dropdown_options_tool(
     Returns:
         JSON string with success status and dropdown update details
     """
+    sheets_service, drive_service = _get_google_services()
     return update_dropdown_options_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, action, column_name, dropdown_options)
 
 
@@ -695,6 +680,7 @@ def delete_table_column_tool(
     Returns:
         JSON string with operation results
     """
+    sheets_service, drive_service = _get_google_services()
     return delete_table_column_handler(
         drive_service,
         sheets_service,
@@ -738,6 +724,7 @@ def add_table_records_tool(
     Returns:
         JSON string with success status and operation details
     """
+    sheets_service, drive_service = _get_google_services()
     return add_table_records_handler(drive_service, sheets_service, spreadsheet_name, sheet_name, table_name, records)
 
 
@@ -765,6 +752,7 @@ def get_sheet_cells_by_range_tool(
     Returns:
         JSON string with cells data and metadata
     """
+    sheets_service, drive_service = _get_google_services()
     return get_sheet_cells_by_range_handler(
         drive_service, 
         sheets_service, 
@@ -811,6 +799,7 @@ def update_table_cells_by_range_tool(
     Returns:
         JSON string with update details
     """
+    sheets_service, drive_service = _get_google_services()
     return update_table_cells_by_range_handler(
         drive_service, 
         sheets_service, 

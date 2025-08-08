@@ -1,0 +1,16 @@
+include README.md
+include LICENSE
+include pyproject.toml
+include uv.lock
+recursive-include gsheet_mcp_server *.py
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude .git*
+global-exclude .venv
+global-exclude .DS_Store
+global-exclude *.log
+exclude auto_setup.py
+exclude mcp-config-examples.md
+exclude table_crud_planning.md
+exclude tools_planning.md
+exclude __main__.py

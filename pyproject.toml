@@ -1,9 +1,9 @@
 [project]
-name = "gsheet-mcp-server"
+name = "google-sheets-mcp"
 version = "0.1.0"
-description = "A Google Sheets MCP Server"
+description = "Your AI Assistant's Gateway to Google Sheets! 25 powerful tools for seamless Google Sheets automation via MCP"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Henil C Alagiya", email = "henilalagiya@gmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,6 +15,24 @@ dependencies = [
     "google-api-python-client>=2.100.0",
     "pydantic>=2.0.0",
 ]
+keywords = ["mcp", "google-sheets", "ai", "automation", "spreadsheets", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Office/Business",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+urls = {Homepage = "https://github.com/henilcalagiya/google-sheets-mcp"}
+
+[project.scripts]
+google-sheets-mcp = "__main__:main"
 
 [project.optional-dependencies]
 dev = [
@@ -28,6 +46,18 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["gsheet_mcp_server"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "gsheet_mcp_server/**/*.py",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+    "uv.lock",
+]
 
 [tool.black]
 line-length = 88
