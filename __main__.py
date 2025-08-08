@@ -7,7 +7,6 @@ Environment variables are provided by the MCP client configuration.
 
 import os
 import sys
-from pathlib import Path
 
 def main():
     """Main entry point for direct execution."""
@@ -27,8 +26,9 @@ def main():
     try:
         from gsheet_mcp_server.server import mcp
         mcp.run()
-    except ImportError:
+    except ImportError as e:
         print("❌ Error: Could not import MCP server")
+        print(f"💡 Error details: {e}")
         print("💡 This package is designed to be used with MCP clients")
         print("💡 Configure your MCP client to use this package")
         sys.exit(1)

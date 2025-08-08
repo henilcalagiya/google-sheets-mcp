@@ -1,6 +1,6 @@
 [project]
 name = "google-sheets-mcp"
-version = "0.1.1"
+version = "0.1.2"
 description = "Your AI Assistant's Gateway to Google Sheets! 25 powerful tools for seamless Google Sheets automation via MCP"
 authors = [
     {name = "Henil C Alagiya", email = "henilalagiya@gmail.com"}
@@ -49,10 +49,14 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["gsheet_mcp_server"]
+include = [
+    "__main__.py"
+]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "gsheet_mcp_server/**/*.py",
+    "__main__.py",
     "README.md",
     "LICENSE",
     "pyproject.toml",
