@@ -119,30 +119,39 @@ python -c "import gsheet_mcp_server; print('✅ Successfully installed')"
    ```
 
 2. ✅ **Verify package contents**:
-   ```bash
-   # Check package contents
-   python -c "
-   import tarfile
-   import os
-   import toml
-   with open('pyproject.toml', 'r') as f:
-       version = toml.load(f)['project']['version']
-   package_file = f'dist/google_sheets_mcp-{version}.tar.gz'
-   t = tarfile.open(package_file)
-   [print(f.name) for f in t.getmembers() if f.name.endswith('.py')]
-   "
+    # Check package contents
+    python -c "
+    import tarfile
+    import os
+    import re
+    
+    # Read version from pyproject.toml using regex
+    with open('pyproject.toml', 'r') as f:
+        content = f.read()
+        match = re.search(r'version = \"([^\"]+)\"', content)
+        version = match.group(1) if match else '0.1.3'
+    
+    package_file = f'dist/google_sheets_mcp-{version}.tar.gz'
+    t = tarfile.open(package_file)
+    [print(f.name) for f in t.getmembers() if f.name.endswith('.py')]
+    "
 
-   # Test wheel installation
-   python -c "
-   import os
-   import toml
-   with open('pyproject.toml', 'r') as f:
-       version = toml.load(f)['project']['version']
-   wheel_file = f'dist/google_sheets_mcp-{version}-py3-none-any.whl'
-   import subprocess
-   subprocess.run(['pip', 'install', wheel_file], check=True)
-   print('✅ Wheel installation successful')
-   "
+    # Test wheel installation
+    python -c "
+    import os
+    import re
+    
+    # Read version from pyproject.toml using regex
+    with open('pyproject.toml', 'r') as f:
+        content = f.read()
+        match = re.search(r'version = \"([^\"]+)\"', content)
+        version = match.group(1) if match else '0.1.3'
+    
+    wheel_file = f'dist/google_sheets_mcp-{version}-py3-none-any.whl'
+    import subprocess
+    subprocess.run(['pip', 'install', wheel_file], check=True)
+    print('✅ Wheel installation successful')
+    "
    ```
 
 ### Security Checklist:

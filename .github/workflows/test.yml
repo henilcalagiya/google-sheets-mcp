@@ -32,7 +32,6 @@ jobs:
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         uv venv
         source .venv/bin/activate
-        uv pip install toml
     
     - name: Build package
       run: |
@@ -48,9 +47,14 @@ jobs:
         python -c "
         import tarfile
         import os
-        import toml
+        import re
+        
+        # Read version from pyproject.toml using regex
         with open('pyproject.toml', 'r') as f:
-            version = toml.load(f)['project']['version']
+            content = f.read()
+            match = re.search(r'version = \"([^\"]+)\"', content)
+            version = match.group(1) if match else '0.1.3'
+        
         package_file = f'dist/google_sheets_mcp-{version}.tar.gz'
         
         if not os.path.exists(package_file):
