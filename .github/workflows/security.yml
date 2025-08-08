@@ -46,20 +46,26 @@ jobs:
         echo "🔍 Checking for sensitive files..."
         
         # Check if any actual credential files are being committed (exclude examples)
-        if find . -name "*.mcp.json" -not -path "./.git/*" -not -name "sample-mcp-config.json" -not -name "*example*" -not -name "*template*"; then
-          echo "❌ Found MCP config files that might contain credentials"
+        MCP_FILES=$(find . -name "*.mcp.json" -not -path "./.git/*" -not -name "sample-mcp-config.json" -not -name "*example*" -not -name "*template*" 2>/dev/null)
+        if [ -n "$MCP_FILES" ]; then
+          echo "❌ Found MCP config files that might contain credentials:"
+          echo "$MCP_FILES"
           exit 1
         fi
         
         # Check for actual credential files with real data
-        if find . -name "credentials*.json" -not -path "./.git/*" -not -name "*example*" -not -name "*template*"; then
-          echo "❌ Found credential files that might contain real data"
+        CRED_FILES=$(find . -name "credentials*.json" -not -path "./.git/*" -not -name "*example*" -not -name "*template*" 2>/dev/null)
+        if [ -n "$CRED_FILES" ]; then
+          echo "❌ Found credential files that might contain real data:"
+          echo "$CRED_FILES"
           exit 1
         fi
         
         # Check for environment files with real data
-        if find . -name ".env*" -not -path "./.git/*" -not -name "*example*" -not -name "*template*"; then
-          echo "❌ Found environment files that might contain real data"
+        ENV_FILES=$(find . -name ".env*" -not -path "./.git/*" -not -name "*example*" -not -name "*template*" 2>/dev/null)
+        if [ -n "$ENV_FILES" ]; then
+          echo "❌ Found environment files that might contain real data:"
+          echo "$ENV_FILES"
           exit 1
         fi
         
