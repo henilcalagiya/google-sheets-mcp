@@ -9,27 +9,29 @@ import os
 import sys
 from pathlib import Path
 
-# Add the package to Python path
-sys.path.insert(0, str(Path(__file__).parent))
-
-from gsheet_mcp_server.server import mcp
-
 def main():
     """Main entry point for direct execution."""
     print("🚀 Google Sheets MCP Server")
     print("📦 Package: google-sheets-mcp")
-    print("🛠️ 25 powerful tools for Google Sheets automation")
+    print("🛠️ Powerful tools for Google Sheets automation")
     print("💡 Environment Variables from MCP Config")
     print("=" * 50)
     
     print("\n✅ Starting MCP server...")
     print("🔌 Ready to connect with MCP clients!")
-    print("📋 Available tools: 25 Google Sheets operations")
+    print("📋 Available tools: Google Sheets operations")
     print("💡 Environment variables provided by MCP client configuration")
     print("=" * 50)
     
-    # Run the MCP server
-    mcp.run()
+    # Import and run the MCP server
+    try:
+        from gsheet_mcp_server.server import mcp
+        mcp.run()
+    except ImportError:
+        print("❌ Error: Could not import MCP server")
+        print("💡 This package is designed to be used with MCP clients")
+        print("💡 Configure your MCP client to use this package")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
