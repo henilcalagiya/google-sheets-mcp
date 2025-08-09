@@ -2,6 +2,10 @@
 
 > Powerful tools for automating Google Sheets using Model Context Protocol (MCP)
 
+<a href="https://glama.ai/mcp/servers/@henilcalagiya/google-sheets-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@henilcalagiya/google-sheets-mcp/badge" alt="google-sheets-mcp MCP server" />
+</a>
+
 ## Overview
 
 Google Sheets MCP Server provides seamless integration of Google Sheets with any MCP-compatible client. It enables full spreadsheet automation — including creating, reading, updating, and deleting sheets — through a simple and secure API layer.
