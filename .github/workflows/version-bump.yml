@@ -1,0 +1,38 @@
+name: Version Bump
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'gsheet_mcp_server/**/*.py'
+      - 'pyproject.toml'
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Check version consistency
+      run: |
+        echo "🔍 Checking version consistency..."
+        
+        # Extract version from pyproject.toml
+        VERSION=$(grep '^version =' pyproject.toml | cut -d'"' -f2)
+        echo "Package version: $VERSION"
+        
+        # Check if version is in __init__.py
+        INIT_VERSION=$(grep '__version__' gsheet_mcp_server/__init__.py | cut -d'"' -f2)
+        echo "Init version: $INIT_VERSION"
+        
+        if [ "$VERSION" != "$INIT_VERSION" ]; then
+          echo "❌ Version mismatch between pyproject.toml and __init__.py"
+          exit 1
+        fi
+        
+        echo "✅ Version consistency verified"
