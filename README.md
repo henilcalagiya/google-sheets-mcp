@@ -64,8 +64,27 @@ irm https://astral.sh/uv/install.ps1 | iex
 **Step 5: Extract Required Values**
 Open the downloaded JSON file and note these values:
 - `project_id` (e.g., "my-sheets-automation-123456")
+- `private_key_id` (e.g., "a4ae73111b11b2c3b07cc01006e71eb8230dfa29")
 - `private_key` (the long private key starting with "-----BEGIN PRIVATE KEY-----")
 - `client_email` (e.g., "sheets-mcp-service@my-sheets-automation-123456.iam.gserviceaccount.com")
+- `client_id` (e.g., "113227823918217958816")
+- `client_x509_cert_url` (e.g., "https://www.googleapis.com/robot/v1/metadata/x509/sheets-mcp-service%40my-sheets-automation-123456.iam.gserviceaccount.com")
+
+**Example Google service account JSON structure:**
+```json
+{
+  "type": "service_account",
+  "project_id": "your-project-id",
+  "private_key_id": "your-private-key-id",
+  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+  "client_email": "your-service@your-project.iam.gserviceaccount.com",
+  "client_id": "your-client-id",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/your-service%40your-project.iam.gserviceaccount.com"
+}
+```
 
 [Follow this guide if needed](https://console.cloud.google.com/apis/credentials)
 
@@ -78,19 +97,21 @@ Open the downloaded JSON file and note these values:
       "command": "uvx",
       "args": ["google-sheets-mcp@latest"],
       "env": {
-        "GOOGLE_PROJECT_ID": "your-project-id",
-        "GOOGLE_PRIVATE_KEY": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
-        "GOOGLE_CLIENT_EMAIL": "your-service@your-project.iam.gserviceaccount.com"
+        "project_id": "your-project-id",
+        "private_key_id": "your-private-key-id",
+        "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+        "client_email": "your-service@your-project.iam.gserviceaccount.com",
+        "client_id": "your-client-id",
+        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/your-service%40your-project.iam.gserviceaccount.com"
       }
     }
   }
 }
 ```
 
-**Extract these values from your Google service account JSON file:**
-- `project_id` → `GOOGLE_PROJECT_ID`
-- `private_key` → `GOOGLE_PRIVATE_KEY`
-- `client_email` → `GOOGLE_CLIENT_EMAIL`
+**💡 Pro Tip:** You can copy the values directly from your Google service account JSON file. The field names in the JSON file are used exactly as they are - no changes needed!
+
+**🔄 Backward Compatibility:** The server also supports the old `GOOGLE_` prefixed variable names (e.g., `GOOGLE_PROJECT_ID`) for existing configurations.
 
 ### 3. Share Your Google Sheet with the Service Account
 

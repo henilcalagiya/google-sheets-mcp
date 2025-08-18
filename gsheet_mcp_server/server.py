@@ -77,24 +77,25 @@ def _setup_google_services_from_env():
     """Set up Google Sheets and Drive API services from environment variables."""
     try:
         # Get all credential components from environment variables
-        project_id = os.getenv("GOOGLE_PROJECT_ID")
-        private_key_id = os.getenv("GOOGLE_PRIVATE_KEY_ID")
-        private_key = os.getenv("GOOGLE_PRIVATE_KEY")
-        client_email = os.getenv("GOOGLE_CLIENT_EMAIL")
-        client_id = os.getenv("GOOGLE_CLIENT_ID")
-        auth_uri = os.getenv("GOOGLE_AUTH_URI", "https://accounts.google.com/o/oauth2/auth")
-        token_uri = os.getenv("GOOGLE_TOKEN_URI", "https://oauth2.googleapis.com/token")
-        auth_provider_x509_cert_url = os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs")
-        client_x509_cert_url = os.getenv("GOOGLE_CLIENT_X509_CERT_URL")
+        # Support both GOOGLE_ prefixed and direct Google JSON field names
+        project_id = os.getenv("project_id") or os.getenv("GOOGLE_PROJECT_ID")
+        private_key_id = os.getenv("private_key_id") or os.getenv("GOOGLE_PRIVATE_KEY_ID")
+        private_key = os.getenv("private_key") or os.getenv("GOOGLE_PRIVATE_KEY")
+        client_email = os.getenv("client_email") or os.getenv("GOOGLE_CLIENT_EMAIL")
+        client_id = os.getenv("client_id") or os.getenv("GOOGLE_CLIENT_ID")
+        auth_uri = os.getenv("auth_uri") or os.getenv("GOOGLE_AUTH_URI", "https://accounts.google.com/o/oauth2/auth")
+        token_uri = os.getenv("token_uri") or os.getenv("GOOGLE_TOKEN_URI", "https://oauth2.googleapis.com/token")
+        auth_provider_x509_cert_url = os.getenv("auth_provider_x509_cert_url") or os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs")
+        client_x509_cert_url = os.getenv("client_x509_cert_url") or os.getenv("GOOGLE_CLIENT_X509_CERT_URL")
         
         # Validate required fields
         required_fields = {
-            "GOOGLE_PROJECT_ID": project_id,
-            "GOOGLE_PRIVATE_KEY_ID": private_key_id,
-            "GOOGLE_PRIVATE_KEY": private_key,
-            "GOOGLE_CLIENT_EMAIL": client_email,
-            "GOOGLE_CLIENT_ID": client_id,
-            "GOOGLE_CLIENT_X509_CERT_URL": client_x509_cert_url
+            "project_id": project_id,
+            "private_key_id": private_key_id,
+            "private_key": private_key,
+            "client_email": client_email,
+            "client_id": client_id,
+            "client_x509_cert_url": client_x509_cert_url
         }
         
         missing_fields = [field for field, value in required_fields.items() if not value]
