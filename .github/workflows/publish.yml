@@ -1,8 +1,9 @@
 name: Publish to PyPI and MCP Registry
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   publish:
@@ -11,45 +12,46 @@ jobs:
       id-token: write  # Required for OIDC authentication
       contents: read
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-    
-    - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-    
-    - name: Build package
-      run: |
-        uv build
-    
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        packages-dir: dist/
-    
-    - name: Install Go
-      run: |
-        wget -O go.tar.gz https://go.dev/dl/go1.21.0.linux-amd64.tar.gz
-        sudo tar -C /usr/local -xzf go.tar.gz
-        echo "/usr/local/go/bin" >> $GITHUB_PATH
-    
-    - name: Install MCP Publisher
-      run: |
-        git clone https://github.com/modelcontextprotocol/registry publisher-repo
-        cd publisher-repo
-        make publisher
-        cp bin/mcp-publisher ../mcp-publisher
-        cd ..
-        chmod +x mcp-publisher
-    
-    - name: Login to MCP Registry
-      run: ./mcp-publisher login github-oidc
-    
-    - name: Publish to MCP Registry
-      run: ./mcp-publisher publish
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      
+      - name: Install dependencies
+        run: uv sync --dev
+      
+      - name: Build package
+        run: uv run python -m build
+      
+      - name: Publish to PyPI
+        run: uv run twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      
+      - name: Install Go
+        run: |
+          wget -O go.tar.gz https://go.dev/dl/go1.21.0.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go.tar.gz
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+      
+      - name: Install MCP Publisher
+        run: |
+          git clone https://github.com/modelcontextprotocol/registry publisher-repo
+          cd publisher-repo
+          make publisher
+          cp bin/mcp-publisher ../mcp-publisher
+          cd ..
+          chmod +x mcp-publisher
+      
+      - name: Login to MCP Registry
+        run: ./mcp-publisher login github-oidc
+      
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish
