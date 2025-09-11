@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.henilcalagiya/google-sheets-mcp",
+  "description": "Powerful tools for automating Google Sheets using Model Context Protocol (MCP)",
+  "status": "active",
+  "repository": {
+    "url": "https://github.com/henilcalagiya/google-sheets-mcp",
+    "source": "github"
+  },
+  "version": "0.1.4",
+  "packages": [
+    {
+      "registry_type": "pypi",
+      "registry_base_url": "https://pypi.org",
+      "identifier": "google-sheets-mcp",
+      "version": "0.1.4",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

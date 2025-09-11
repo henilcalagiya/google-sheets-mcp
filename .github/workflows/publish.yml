@@ -1,4 +1,4 @@
-name: Publish to PyPI
+name: Publish to PyPI and MCP Registry
 
 on:
   release:
@@ -7,6 +7,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for OIDC authentication
+      contents: read
     steps:
     - uses: actions/checkout@v4
     
@@ -29,3 +32,24 @@ jobs:
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
         packages-dir: dist/
+    
+    - name: Install Go
+      run: |
+        wget -O go.tar.gz https://go.dev/dl/go1.21.0.linux-amd64.tar.gz
+        sudo tar -C /usr/local -xzf go.tar.gz
+        echo "/usr/local/go/bin" >> $GITHUB_PATH
+    
+    - name: Install MCP Publisher
+      run: |
+        git clone https://github.com/modelcontextprotocol/registry publisher-repo
+        cd publisher-repo
+        make publisher
+        cp bin/mcp-publisher ../mcp-publisher
+        cd ..
+        chmod +x mcp-publisher
+    
+    - name: Login to MCP Registry
+      run: ./mcp-publisher login github-oidc
+    
+    - name: Publish to MCP Registry
+      run: ./mcp-publisher publish

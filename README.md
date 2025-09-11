@@ -2,6 +2,8 @@
 
 > Powerful tools for automating Google Sheets using Model Context Protocol (MCP)
 
+**mcp-name: io.github.henilcalagiya/google-sheets-mcp**
+
 ## Overview
 
 Google Sheets MCP Server provides seamless integration of Google Sheets with any MCP-compatible client. It enables full spreadsheet automation — including creating, reading, updating, and deleting sheets — through a simple and secure API layer.

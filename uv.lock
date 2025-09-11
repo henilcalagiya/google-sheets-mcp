@@ -268,7 +268,7 @@ wheels = [
 
 [[package]]
 name = "google-sheets-mcp"
-version = "0.1.1"
+version = "0.1.4"
 source = { editable = "." }
 dependencies = [
     { name = "google-api-python-client" },
@@ -277,6 +277,7 @@ dependencies = [
     { name = "google-auth-oauthlib" },
     { name = "mcp", extra = ["cli"] },
     { name = "pydantic" },
+    { name = "requests" },
 ]
 
 [package.optional-dependencies]
@@ -310,6 +311,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
+    { name = "requests", specifier = ">=2.32.4" },
 ]
 provides-extras = ["dev"]
 
